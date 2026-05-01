@@ -12,62 +12,48 @@ export default async function DashboardPage() {
 
   const isAdmin = session.user.role === 'admin'
   const pilotId = session.user.pilotId ?? undefined
-
-  // Admin sees all pilots, agency sees only their own
   const metrics = await getLatestMetrics(isAdmin ? undefined : pilotId)
-
   const latestSync = metrics[0]?.fetched_at ?? null
+
+  const influencers = metrics.filter(m => m.pilot.type === 'influencer')
+  const ugc = metrics.filter(m => m.pilot.type === 'ugc')
 
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-end justify-between mb-10">
         <div>
-          <h1 className="text-2xl font-semibold text-white">
-            {isAdmin ? 'All Pilots' : metrics[0]?.pilot.name ?? 'Your Campaign'}
+          <h1 className="text-2xl font-semibold text-white tracking-tight">
+            {isAdmin ? 'Pilots' : metrics[0]?.pilot.name ?? 'Campaign'}
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {isAdmin
-              ? 'UGC & Influencer Marketing Pilots - TAL'
-              : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} pilot`}
+          <p className="text-zinc-500 text-sm mt-1">
+            {isAdmin ? 'May 2025 · UGC & Influencer' : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
           </p>
         </div>
         {latestSync && <SyncBadge syncedAt={latestSync} />}
       </div>
 
-      {/* Pilot cards grid */}
       {metrics.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          No data yet. The cron job will sync every 12 hours.
+        <div className="py-24 text-center text-zinc-600 text-sm">
+          No data yet - trigger a sync to populate metrics.
         </div>
       ) : isAdmin ? (
-        <>
-          {/* Admin: split by type */}
-          <section className="mb-10">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">
-              Influencer Pilots
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {metrics
-                .filter(m => m.pilot.type === 'influencer')
-                .map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin={isAdmin} />)}
-            </div>
-          </section>
-
+        <div className="space-y-10">
           <section>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">
-              UGC Pilots
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {metrics
-                .filter(m => m.pilot.type === 'ugc')
-                .map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin={isAdmin} />)}
+            <p className="text-[11px] font-medium tracking-widest uppercase text-zinc-600 mb-4">Influencer</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {influencers.map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin />)}
             </div>
           </section>
-        </>
+          <section>
+            <p className="text-[11px] font-medium tracking-widest uppercase text-zinc-600 mb-4">UGC</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {ugc.map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin />)}
+            </div>
+          </section>
+        </div>
       ) : (
-        // Agency view: single expanded card
-        <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-3">
           {metrics.map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin={false} expanded />)}
         </div>
       )}
