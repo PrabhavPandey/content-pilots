@@ -2,7 +2,7 @@ import { PilotMetrics, Pilot } from '@/lib/db'
 
 type Props = {
   metrics: PilotMetrics & { pilot: Pilot }
-  isAdmin: boolean
+  isAdmin?: boolean
   expanded?: boolean
 }
 
