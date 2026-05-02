@@ -21,40 +21,58 @@ export default async function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-end justify-between mb-10">
+      <div className="flex items-start justify-between mb-10">
         <div>
-          <h1 className="text-2xl font-semibold text-white tracking-tight">
-            {isAdmin ? 'Pilots' : metrics[0]?.pilot.name ?? 'Campaign'}
+          {!isAdmin && (
+            <p className="text-sm text-gray-500 mb-1">Hi there 👋</p>
+          )}
+          <h1
+            className="text-2xl font-semibold text-gray-900"
+            style={{ fontFamily: 'var(--font-poppins)' }}
+          >
+            {isAdmin ? 'Pilots' : metrics[0]?.pilot.name ?? 'Your Campaign'}
           </h1>
-          <p className="text-zinc-500 text-sm mt-1">
-            {isAdmin ? 'May 2025 · UGC & Influencer' : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
+          <p className="text-sm text-gray-400 mt-1">
+            {isAdmin
+              ? 'UGC & Influencer · May 2025'
+              : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
           </p>
         </div>
         {latestSync && <SyncBadge syncedAt={latestSync} />}
       </div>
 
       {metrics.length === 0 ? (
-        <div className="py-24 text-center text-zinc-600 text-sm">
-          No data yet - trigger a sync to populate metrics.
+        <div className="py-24 text-center text-gray-400 text-sm">
+          No data yet. Trigger a sync to populate metrics.
         </div>
       ) : isAdmin ? (
         <div className="space-y-10">
           <section>
-            <p className="text-[11px] font-medium tracking-widest uppercase text-zinc-600 mb-4">Influencer</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {influencers.map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin />)}
+            <p
+              className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4"
+              style={{ fontFamily: 'var(--font-inconsolata)' }}
+            >
+              Influencer
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {influencers.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
             </div>
           </section>
           <section>
-            <p className="text-[11px] font-medium tracking-widest uppercase text-zinc-600 mb-4">UGC</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {ugc.map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin />)}
+            <p
+              className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4"
+              style={{ fontFamily: 'var(--font-inconsolata)' }}
+            >
+              UGC
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ugc.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
             </div>
           </section>
         </div>
       ) : (
-        <div className="space-y-3">
-          {metrics.map(m => <PilotCard key={m.pilot_id} metrics={m} isAdmin={false} expanded />)}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {metrics.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
         </div>
       )}
     </div>

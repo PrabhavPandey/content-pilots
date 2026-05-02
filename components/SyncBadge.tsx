@@ -12,9 +12,9 @@ function timeAgo(dateStr: string): string {
 
 export default function SyncBadge({ syncedAt }: { syncedAt: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-[11px] text-zinc-600">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70 inline-block" />
-      {timeAgo(syncedAt)}
+    <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-1">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block flex-shrink-0" />
+      Synced {timeAgo(syncedAt)}
     </div>
   )
 }

@@ -25,13 +25,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#080808' }}>
-      <div className="w-full max-w-[340px]">
+    <div className="min-h-screen flex items-center justify-center bg-white px-6">
+      <div className="w-full max-w-[360px]">
 
-        <div className="mb-10">
-          <p className="text-xs font-medium tracking-widest uppercase text-zinc-500 mb-3">TAL</p>
-          <h1 className="text-xl font-semibold text-white leading-snug">Pilot Tracker</h1>
-          <p className="text-zinc-500 text-sm mt-1">Sign in to view your campaign</p>
+        {/* Header */}
+        <div className="mb-8">
+          <p
+            className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4"
+            style={{ fontFamily: 'var(--font-inconsolata)' }}
+          >
+            TAL · Pilot Tracker
+          </p>
+          <h1
+            className="text-2xl font-semibold text-gray-900 leading-snug"
+            style={{ fontFamily: 'var(--font-poppins)' }}
+          >
+            Sign in
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Enter your credentials to view your campaign.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -39,7 +50,7 @@ export default function LoginPage() {
             type="text"
             value={username}
             onChange={e => setUsername(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+            className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
             placeholder="Username"
             required
             autoFocus
@@ -48,19 +59,21 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+            className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-colors"
             placeholder="Password"
             required
           />
 
-          {error && <p className="text-red-400 text-xs pt-1">{error}</p>}
+          {error && (
+            <p className="text-red-600 text-xs">{error}</p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white hover:bg-zinc-100 disabled:opacity-40 text-black text-sm font-medium rounded-lg py-3 transition-colors mt-1"
+            className="w-full bg-blue-500 hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg py-3 transition-colors"
           >
-            {loading ? 'Signing in...' : 'Continue'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>
