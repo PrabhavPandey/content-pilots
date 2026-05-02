@@ -48,11 +48,20 @@ export type User = {
   pilot_id: string | null
 }
 
-// Fetch latest metrics for all pilots (or one pilot)
-export async function getLatestMetrics(pilotId?: string): Promise<(PilotMetrics & { pilot: Pilot })[]> {
+export type MetricsWithPilot = PilotMetrics & {
+  pilot: Pilot
+  // Previous sync row - used to compute deltas on the dashboard
+  prev?: PilotMetrics
+  // False when no sync has run yet (zeroed placeholder row)
+  hasData: boolean
+}
+
+// Fetch latest metrics for all pilots (or one pilot).
+// Returns the most recent row + the one before it (for delta display).
+// When no sync has run, returns zeroed placeholder with hasData: false.
+export async function getLatestMetrics(pilotId?: string): Promise<MetricsWithPilot[]> {
   const db = getServiceClient()
 
-  // Get latest fetched_at per pilot using a subquery approach
   const { data: pilots } = await db
     .from('pilots')
     .select('*')
@@ -62,25 +71,29 @@ export async function getLatestMetrics(pilotId?: string): Promise<(PilotMetrics 
   if (!pilots) return []
 
   const filteredPilots = pilotId ? pilots.filter(p => p.id === pilotId) : pilots
-  const results: (PilotMetrics & { pilot: Pilot })[] = []
+  const results: MetricsWithPilot[] = []
 
   for (const pilot of filteredPilots) {
-    const { data: metrics } = await db
+    // Fetch last 2 rows so we can compute deltas
+    const { data: rows } = await db
       .from('pilot_metrics')
       .select('*')
       .eq('pilot_id', pilot.id)
       .order('fetched_at', { ascending: false })
-      .limit(1)
-      .single()
+      .limit(2)
 
-    if (metrics) {
-      results.push({ ...metrics, pilot })
+    const current = rows?.[0]
+    const prev = rows?.[1]
+
+    if (current) {
+      results.push({ ...current, pilot, prev: prev ?? undefined, hasData: true })
     } else {
-      // Return zeroed metrics if no data yet
+      // No sync yet - return zeroed row so the card still renders
+      // fetched_at is empty string so SyncBadge doesn't show "just now"
       results.push({
         id: '',
         pilot_id: pilot.id,
-        fetched_at: new Date().toISOString(),
+        fetched_at: '',
         lr_clicks: 0,
         lr_installs: 0,
         lr_reinstalls: 0,
@@ -93,6 +106,7 @@ export async function getLatestMetrics(pilotId?: string): Promise<(PilotMetrics 
         click_to_install_rate: 0,
         install_to_qualified_rate: 0,
         pilot,
+        hasData: false,
       })
     }
   }

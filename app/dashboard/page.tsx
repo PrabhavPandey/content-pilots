@@ -13,10 +13,15 @@ export default async function DashboardPage() {
   const isAdmin = session.user.role === 'admin'
   const pilotId = session.user.pilotId ?? undefined
   const metrics = await getLatestMetrics(isAdmin ? undefined : pilotId)
-  const latestSync = metrics[0]?.fetched_at ?? null
+
+  // Only show SyncBadge when at least one real sync has occurred
+  const latestSync = metrics.find(m => m.fetched_at)?.fetched_at ?? null
 
   const influencers = metrics.filter(m => m.pilot.type === 'influencer')
   const ugc = metrics.filter(m => m.pilot.type === 'ugc')
+
+  // Dynamic month label - no more hardcoded "May 2025"
+  const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   return (
     <div>
@@ -34,11 +39,11 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-sm text-gray-400 mt-1">
             {isAdmin
-              ? 'UGC & Influencer · May 2025'
+              ? `UGC & Influencer · ${monthYear}`
               : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
           </p>
+          {latestSync && <SyncBadge syncedAt={latestSync} />}
         </div>
-        {latestSync && <SyncBadge syncedAt={latestSync} />}
       </div>
 
       {metrics.length === 0 ? (

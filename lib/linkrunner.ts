@@ -48,7 +48,16 @@ export async function getLinkrunnerStats(
     })
 
     // The API returns a list of campaigns - find ours by name
-    const campaigns: any[] = data?.data || data?.campaigns || []
+    const campaigns: any[] = data?.data || data?.campaigns || data || []
+
+    // Log response shape on first call so we can validate field names in Vercel logs
+    if (campaigns.length > 0) {
+      console.log('[Linkrunner] response keys:', Object.keys(campaigns[0]))
+      console.log('[Linkrunner] first campaign sample:', JSON.stringify(campaigns[0]))
+    } else {
+      console.warn('[Linkrunner] empty campaigns response. Raw:', JSON.stringify(data).slice(0, 300))
+    }
+
     const campaign = campaigns.find(
       (c: any) =>
         c.name?.toLowerCase() === campaignName.toLowerCase() ||

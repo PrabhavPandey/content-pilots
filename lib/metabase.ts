@@ -36,11 +36,11 @@ export type MetabaseUser = {
 }
 
 // Fetch all onboarded users from question 498
-// Uses a 90-day lookback window to capture the full pilot period
+// 180-day lookback so early-pilot users don't fall out of the window
 export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
   const today = new Date()
   const ninetyDaysAgo = new Date(today)
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 180)
 
   const fmt = (d: Date) => d.toISOString().split('T')[0]
 
