@@ -1,22 +1,26 @@
 // Cron endpoint: fetches metrics for all pilots from Linkrunner, Mixpanel, Metabase
-// Called every 12h by Vercel Cron (configured in vercel.json)
-// Protected by CRON_SECRET header
+// Called daily by Vercel Cron (configured in vercel.json)
+// Protected by CRON_SECRET query param or Authorization: Bearer header
+//
+// Qualification logic (3 layers):
+//   1. City check (rule-based) - must be in a qualified metro
+//   2. Onboarded check - must appear in Metabase question 498 (means they completed onboarding)
+//   3. Company check (Gemini) - must be at a funded startup / tech company
+//
+// Data flow per pilot:
+//   Mixpanel (campaign users with city) → phone match → Metabase (company) → Gemini → count
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/db'
 import { getLinkrunnerStats } from '@/lib/linkrunner'
 import { getMixpanelInstalls } from '@/lib/mixpanel'
-import { getQualifiedInstalls } from '@/lib/metabase'
-
-// Metabase question ID that contains qualified installs
-// You need to find this once (hit /api/metabase-questions to list all questions)
-const QUALIFIED_INSTALLS_QUESTION_ID = parseInt(
-  process.env.METABASE_QUALIFIED_QUESTION_ID ?? '0'
-)
+import { getOnboardedUsers } from '@/lib/metabase'
+import { isCityQualified, batchClassifyCompanies } from '@/lib/gemini'
 
 export async function GET(req: NextRequest) {
-  // Auth check - must pass ?secret=CRON_SECRET or Authorization: Bearer CRON_SECRET
-  const secret = req.nextUrl.searchParams.get('secret') ??
+  // Auth check
+  const secret =
+    req.nextUrl.searchParams.get('secret') ??
     req.headers.get('authorization')?.replace('Bearer ', '')
 
   if (secret !== process.env.CRON_SECRET) {
@@ -35,6 +39,37 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch pilots' }, { status: 500 })
   }
 
+  // Fetch all onboarded users from Metabase ONCE (shared across all pilots)
+  // question 498: phone + name + company for everyone who onboarded in the last 90 days
+  let metabaseUsers: Awaited<ReturnType<typeof getOnboardedUsers>> = []
+  try {
+    metabaseUsers = await getOnboardedUsers()
+    console.log(`Metabase: loaded ${metabaseUsers.length} onboarded users`)
+  } catch (err) {
+    console.error('Metabase fetch failed - qualified installs will be 0:', err)
+  }
+
+  // Build phone → MetabaseUser lookup map (normalized 10-digit phone as key)
+  const phoneToMetabaseUser = new Map(
+    metabaseUsers.map(u => [u.phone, u])
+  )
+
+  // Pre-classify all unique companies in one batch (hits Gemini once per unique company)
+  const allCompanies = [
+    ...new Set(
+      metabaseUsers
+        .map(u => u.company)
+        .filter((c): c is string => Boolean(c))
+    ),
+  ]
+  let companyQualificationMap = new Map<string, boolean>()
+  try {
+    companyQualificationMap = await batchClassifyCompanies(allCompanies)
+    console.log(`Gemini: classified ${allCompanies.length} unique companies`)
+  } catch (err) {
+    console.error('Gemini batch classification failed:', err)
+  }
+
   const results = []
   const errors = []
 
@@ -42,22 +77,39 @@ export async function GET(req: NextRequest) {
     try {
       console.log(`Syncing pilot: ${pilot.name}`)
 
-      // 1. Linkrunner - clicks + installs + retention
+      // 1. Linkrunner - clicks + installs
       const lrStats = await getLinkrunnerStats(pilot.linkrunner_campaign_name)
 
-      // 2. Mixpanel - first app opens + phone numbers for matching
+      // 2. Mixpanel - first app opens + per-user city data
       const mpData = await getMixpanelInstalls(pilot.linkrunner_campaign_name)
 
-      // 3. Metabase - qualified installs (cross-referenced by phone number)
+      // 3. Qualification: for each Mixpanel user attributed to this campaign,
+      //    check city (layer 1) + onboarded in Metabase (layer 2) + startup company (layer 3)
       let qualifiedInstalls = 0
-      if (QUALIFIED_INSTALLS_QUESTION_ID > 0) {
-        qualifiedInstalls = await getQualifiedInstalls(
-          mpData.phone_numbers,
-          QUALIFIED_INSTALLS_QUESTION_ID
-        )
+
+      for (const mpUser of mpData.users) {
+        // Layer 1: city check
+        if (!isCityQualified(mpUser.city)) continue
+
+        // Layer 2: onboarded check - must appear in Metabase question 498
+        const metaUser = phoneToMetabaseUser.get(mpUser.phone)
+        if (!metaUser) continue
+
+        // Layer 3: startup/company check via Gemini
+        if (!metaUser.company) continue
+        const companyKey = metaUser.company.toLowerCase().trim()
+        const isStartup = companyQualificationMap.get(companyKey) ?? false
+        if (!isStartup) continue
+
+        qualifiedInstalls++
       }
 
-      // Write to Supabase cache
+      console.log(
+        `  ${pilot.name}: lr=${lrStats?.clicks ?? 0} clicks, ` +
+        `mp=${mpData.first_app_opens} first_opens, qualified=${qualifiedInstalls}`
+      )
+
+      // Write to Supabase
       const { error: insertError } = await db.from('pilot_metrics').insert({
         pilot_id: pilot.id,
         fetched_at: new Date().toISOString(),
@@ -76,10 +128,10 @@ export async function GET(req: NextRequest) {
 
       if (insertError) throw insertError
 
-      results.push({ pilot: pilot.id, status: 'ok', qualifiedInstalls })
+      results.push({ pilot: pilot.name, status: 'ok', qualifiedInstalls })
     } catch (err: any) {
       console.error(`Failed to sync ${pilot.name}:`, err)
-      errors.push({ pilot: pilot.id, error: err?.message ?? String(err) })
+      errors.push({ pilot: pilot.name, error: err?.message ?? String(err) })
     }
   }
 

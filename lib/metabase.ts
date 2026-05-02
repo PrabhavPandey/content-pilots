@@ -1,6 +1,6 @@
-// Metabase API client
-// Used to fetch qualified install data and match against phone numbers from Mixpanel
-// Auth: API key in X-API-KEY header (imlewc/metabase-server MCP format)
+// Metabase API client - READ ONLY
+// Question 498: "Tal Onboarded User Details + Company"
+// Columns: Phone Number, Name, LinkedIn, Current Company, Onboarded At
 
 const BASE_URL = process.env.METABASE_URL ?? 'https://metabase.pub.gcp.gvine.app'
 const API_KEY = process.env.METABASE_API_KEY ?? ''
@@ -17,72 +17,77 @@ async function metabaseFetch(path: string, options?: RequestInit) {
   })
 
   if (!res.ok) {
-    throw new Error(`Metabase API error: ${res.status} ${await res.text()}`)
+    throw new Error(`Metabase API error ${res.status}: ${await res.text()}`)
   }
 
   return res.json()
 }
 
-// Run a Metabase question/card by ID and return rows
-export async function runMetabaseQuestion(questionId: number): Promise<any[]> {
+function runRows(data: any): Record<string, any>[] {
+  const rows: any[][] = data?.data?.rows ?? []
+  const cols: { name: string }[] = data?.data?.cols ?? []
+  return rows.map(row => Object.fromEntries(cols.map((col, i) => [col.name, row[i]])))
+}
+
+export type MetabaseUser = {
+  phone: string
+  name: string | null
+  company: string | null
+}
+
+// Fetch all onboarded users from question 498
+// Uses a 90-day lookback window to capture the full pilot period
+export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
+  const today = new Date()
+  const ninetyDaysAgo = new Date(today)
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+  const fmt = (d: Date) => d.toISOString().split('T')[0]
+
   try {
-    const data = await metabaseFetch(`/card/${questionId}/query`, {
+    const data = await metabaseFetch('/card/498/query', {
       method: 'POST',
-      body: JSON.stringify({ ignore_cache: true }),
+      body: JSON.stringify({
+        ignore_cache: true,
+        parameters: [
+          {
+            type: 'date/single',
+            value: fmt(ninetyDaysAgo),
+            target: ['variable', ['template-tag', 'start_date']],
+          },
+          {
+            type: 'date/single',
+            value: fmt(today),
+            target: ['variable', ['template-tag', 'end_date']],
+          },
+        ],
+      }),
     })
 
-    const rows: any[][] = data?.data?.rows ?? []
-    const cols: { name: string }[] = data?.data?.cols ?? []
+    const rows = runRows(data)
 
-    // Convert row arrays to objects using column names
-    return rows.map(row =>
-      Object.fromEntries(cols.map((col, i) => [col.name, row[i]]))
-    )
+    // Normalize column names - Metabase may use different casings
+    return rows.map(row => {
+      const phone =
+        row['Phone Number'] ?? row['phone_number'] ?? row['phone'] ?? row['Phone'] ?? ''
+      const name = row['Name'] ?? row['name'] ?? null
+      const company =
+        row['Current Company'] ?? row['current_company'] ?? row['company'] ?? null
+
+      return {
+        phone: String(phone).replace(/\D/g, '').slice(-10),
+        name: name ? String(name) : null,
+        company: company ? String(company).trim() : null,
+      }
+    }).filter(u => u.phone.length >= 8)
+
   } catch (err) {
-    console.error(`Metabase question ${questionId} failed:`, err)
+    console.error('Metabase getOnboardedUsers failed:', err)
     return []
   }
 }
 
-// Cross-reference phone numbers from Mixpanel with Metabase qualified install data
-// Returns the count of phone numbers that appear in the qualified installs list
-export async function getQualifiedInstalls(
-  phoneNumbers: string[],
-  qualifiedInstallsQuestionId: number
-): Promise<number> {
-  if (phoneNumbers.length === 0) {
-    // If Mixpanel isn't configured yet, try fetching total qualified count from Metabase
-    // and fall back to 0
-    return 0
-  }
-
-  try {
-    const qualifiedUsers = await runMetabaseQuestion(qualifiedInstallsQuestionId)
-
-    // Normalize phone numbers for comparison
-    const normalize = (p: string) => p.replace(/\D/g, '').slice(-10)
-    const mixpanelSet = new Set(phoneNumbers.map(normalize))
-
-    // Look for phone number column (common column names)
-    const PHONE_COLS = ['phone', 'phone_number', 'mobile', 'Phone', 'Phone Number', 'mobile_number']
-
-    let matched = 0
-    for (const row of qualifiedUsers) {
-      const phoneVal = PHONE_COLS.map(c => row[c]).find(v => v != null)
-      if (phoneVal) {
-        const normalized = normalize(String(phoneVal))
-        if (mixpanelSet.has(normalized)) matched++
-      }
-    }
-
-    return matched
-  } catch (err) {
-    console.error('Metabase qualified install matching failed:', err)
-    return 0
-  }
-}
-
-// Fetch all available questions in Metabase (useful for finding the right question ID)
+// List all Metabase questions (helper endpoint, read-only)
 export async function listMetabaseQuestions(): Promise<{ id: number; name: string }[]> {
   try {
     const data = await metabaseFetch('/card?f=all&page=0&page_size=100')

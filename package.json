@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@auth/supabase-adapter": "^1.11.2",
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.105.1",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
