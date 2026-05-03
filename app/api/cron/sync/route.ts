@@ -1,24 +1,20 @@
-// Cron endpoint: fetches metrics for all pilots from Linkrunner, Mixpanel, Metabase
-// Called daily by Vercel Cron (configured in vercel.json)
-// Protected by CRON_SECRET query param or Authorization: Bearer header
+// Cron endpoint: syncs metrics for all pilots
+// Called daily by Vercel Cron. Protected by CRON_SECRET.
 //
-// Qualification logic (3 layers):
-//   1. City check (rule-based) - must be in a qualified metro
-//   2. Onboarded check - must appear in Metabase question 498 (means they completed onboarding)
-//   3. Company check (Gemini) - must be at a funded startup / tech company
-//
-// Data flow per pilot:
-//   Mixpanel (campaign users with city) → phone match → Metabase (company) → Gemini → count
+// Gemini cost control:
+//   We ONLY classify companies for users who (a) clicked a campaign link AND (b) onboarded.
+//   This means Gemini calls scale with actual campaign traffic - not the full Metabase user base.
+//   At zero traffic: 0 Gemini calls. At 100 attributed+onboarded users: ~20-30 unique companies.
+//   Results are cached in Supabase so each company is only ever classified once.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/db'
 import { getLinkrunnerStats } from '@/lib/linkrunner'
-import { getMixpanelInstalls } from '@/lib/mixpanel'
+import { getMixpanelInstalls, MixpanelUser } from '@/lib/mixpanel'
 import { getOnboardedUsers } from '@/lib/metabase'
 import { isCityQualified, batchClassifyCompanies } from '@/lib/gemini'
 
 export async function GET(req: NextRequest) {
-  // Auth check
   const secret =
     req.nextUrl.searchParams.get('secret') ??
     req.headers.get('authorization')?.replace('Bearer ', '')
@@ -29,7 +25,6 @@ export async function GET(req: NextRequest) {
 
   const db = getServiceClient()
 
-  // Fetch all active pilots
   const { data: pilots, error } = await db
     .from('pilots')
     .select('*')
@@ -39,81 +34,70 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch pilots' }, { status: 500 })
   }
 
-  // Fetch all onboarded users from Metabase ONCE (shared across all pilots)
-  // question 498: phone + name + company for everyone who onboarded in the last 90 days
-  let metabaseUsers: Awaited<ReturnType<typeof getOnboardedUsers>> = []
+  // ── Phase 1: Collect Mixpanel data for all pilots up front ──────────────
+  // We need all attributed phones before hitting Metabase so we can filter efficiently.
+  const pilotMpData = new Map<string, { first_app_opens: number; users: MixpanelUser[] }>()
+  const allAttributedPhones = new Set<string>()
+
+  for (const pilot of pilots) {
+    const mpData = await getMixpanelInstalls(pilot.linkrunner_campaign_name)
+    pilotMpData.set(pilot.id, mpData)
+    mpData.users.forEach(u => { if (u.phone) allAttributedPhones.add(u.phone) })
+  }
+  console.log(`Mixpanel: ${allAttributedPhones.size} unique attributed phones across all pilots`)
+
+  // ── Phase 2: Fetch Metabase users once ───────────────────────────────────
+  let phoneToCompany = new Map<string, string>()
   try {
-    metabaseUsers = await getOnboardedUsers()
-    console.log(`Metabase: loaded ${metabaseUsers.length} onboarded users`)
+    const metabaseUsers = await getOnboardedUsers()
+    console.log(`Metabase: ${metabaseUsers.length} onboarded users total`)
+
+    // Build lookup: phone → company (only for users who are in our campaigns)
+    for (const u of metabaseUsers) {
+      if (u.phone && u.company && allAttributedPhones.has(u.phone)) {
+        phoneToCompany.set(u.phone, u.company.toLowerCase().trim())
+      }
+    }
+    console.log(`Metabase: ${phoneToCompany.size} phones matched to campaign-attributed users`)
   } catch (err) {
-    console.error('Metabase fetch failed - qualified installs will be 0:', err)
+    console.error('Metabase fetch failed:', err)
   }
 
-  // Build phone → MetabaseUser lookup map (normalized 10-digit phone as key)
-  const phoneToMetabaseUser = new Map(
-    metabaseUsers.map(u => [u.phone, u])
-  )
+  // ── Phase 3: Classify ONLY companies of matched users ───────────────────
+  // This is the key cost control: we never classify companies for people
+  // who didn't click our campaign links. At zero traffic: 0 Gemini calls.
+  const relevantCompanies = [...new Set(phoneToCompany.values())]
+  console.log(`Gemini: classifying ${relevantCompanies.length} unique companies (campaign-attributed only)`)
 
-  // Pre-classify all unique companies in one batch (hits Gemini once per unique company)
-  const allCompanies = [
-    ...new Set(
-      metabaseUsers
-        .map(u => u.company)
-        .filter((c): c is string => Boolean(c))
-    ),
-  ]
-  let companyQualificationMap = new Map<string, boolean>()
-  try {
-    companyQualificationMap = await batchClassifyCompanies(allCompanies)
-    console.log(`Gemini: classified ${allCompanies.length} unique companies`)
-  } catch (err) {
-    console.error('Gemini batch classification failed:', err)
-  }
+  const companyMap = relevantCompanies.length > 0
+    ? await batchClassifyCompanies(relevantCompanies, db)
+    : new Map<string, boolean>()
 
+  // ── Phase 4: Per-pilot metrics ────────────────────────────────────────────
   const results = []
   const errors = []
 
   for (const pilot of pilots) {
     try {
-      console.log(`Syncing pilot: ${pilot.name}`)
+      const [lrStats, mpData] = await Promise.all([
+        getLinkrunnerStats(pilot.linkrunner_campaign_name),
+        Promise.resolve(pilotMpData.get(pilot.id)!),
+      ])
 
-      // 1. Linkrunner - clicks + installs
-      const lrStats = await getLinkrunnerStats(pilot.linkrunner_campaign_name)
-
-      // 2. Mixpanel - first app opens + per-user city data
-      const mpData = await getMixpanelInstalls(pilot.linkrunner_campaign_name)
-
-      // 3. Qualification: for each Mixpanel user attributed to this campaign,
-      //    check city (layer 1) + onboarded in Metabase (layer 2) + startup company (layer 3)
       let qualifiedInstalls = 0
-
       for (const mpUser of mpData.users) {
-        // Layer 1: city check
         if (!isCityQualified(mpUser.city)) continue
-
-        // Layer 2: onboarded check - must appear in Metabase question 498
-        const metaUser = phoneToMetabaseUser.get(mpUser.phone)
-        if (!metaUser) continue
-
-        // Layer 3: startup/company check via Gemini
-        if (!metaUser.company) continue
-        const companyKey = metaUser.company.toLowerCase().trim()
-        const isStartup = companyQualificationMap.get(companyKey) ?? false
-        if (!isStartup) continue
-
+        const companyKey = phoneToCompany.get(mpUser.phone)
+        if (!companyKey) continue // didn't onboard
+        if (!(companyMap.get(companyKey) ?? false)) continue // not a startup
         qualifiedInstalls++
       }
 
-      console.log(
-        `  ${pilot.name}: lr=${lrStats?.clicks ?? 0} clicks, ` +
-        `mp=${mpData.first_app_opens} first_opens, qualified=${qualifiedInstalls}`
-      )
+      console.log(`${pilot.name}: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} opens=${mpData.first_app_opens} qualified=${qualifiedInstalls}`)
 
-      // Write to Supabase
       const { error: insertError } = await db.from('pilot_metrics').insert({
         pilot_id: pilot.id,
         fetched_at: new Date().toISOString(),
-
         lr_clicks: lrStats?.clicks ?? 0,
         lr_installs: lrStats?.installs ?? 0,
         lr_reinstalls: lrStats?.reinstalls ?? 0,
@@ -121,13 +105,11 @@ export async function GET(req: NextRequest) {
         lr_conversion_rate: lrStats?.conversion_rate ?? 0,
         lr_retention_d1: lrStats?.retention_d1 ?? 0,
         lr_retention_d7: lrStats?.retention_d7 ?? 0,
-
         mp_first_app_opens: mpData.first_app_opens,
         qualified_installs: qualifiedInstalls,
       })
 
       if (insertError) throw insertError
-
       results.push({ pilot: pilot.name, status: 'ok', qualifiedInstalls })
     } catch (err: any) {
       console.error(`Failed to sync ${pilot.name}:`, err)
@@ -135,9 +117,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    synced_at: new Date().toISOString(),
-    results,
-    errors,
-  })
+  return NextResponse.json({ synced_at: new Date().toISOString(), results, errors })
 }
