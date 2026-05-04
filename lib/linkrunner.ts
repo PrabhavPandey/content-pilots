@@ -1,7 +1,8 @@
 // Linkrunner Data API client
 // Docs: https://docs.linkrunner.io/api-reference/data-apis
+// Base URL confirmed: https://api.linkrunner.io/api/v1/...
 
-const BASE_URL = 'https://api.linkrunner.io'
+const BASE_URL = 'https://api.linkrunner.io/api'
 
 export type LinkrunnerCampaignStats = {
   campaign_name: string
@@ -36,20 +37,24 @@ async function linkrunnerFetch(path: string, params?: Record<string, string>) {
 }
 
 function parseCampaign(c: any, nameOverride?: string): LinkrunnerCampaignStats {
+  // `attributed_users` may be a count (number) or array - handle both
+  const attributed = Array.isArray(c.attributed_users)
+    ? c.attributed_users.length
+    : (typeof c.attributed_users === 'number' ? c.attributed_users : null)
+
   return {
     campaign_name: nameOverride ?? c.name ?? c.campaign_name ?? '',
-    clicks: c.clicks ?? 0,
-    installs: c.installs ?? 0,
-    reinstalls: c.reinstalls ?? 0,
-    signups: c.sign_ups ?? c.signups ?? 0,
+    clicks:          c.clicks ?? c.total_clicks ?? c.click_count ?? 0,
+    installs:        c.installs ?? c.total_installs ?? attributed ?? 0,
+    reinstalls:      c.reinstalls ?? 0,
+    signups:         c.sign_ups ?? c.signups ?? 0,
     conversion_rate: parseFloat(c.conversion ?? c.conversion_rate ?? 0),
-    retention_d1: parseFloat(c.rolling_retention_d1 ?? c.retention_d1 ?? 0),
-    retention_d7: parseFloat(c.rolling_retention_d7 ?? c.retention_d7 ?? 0),
+    retention_d1:    parseFloat(c.rolling_retention_d1 ?? c.retention_d1 ?? 0),
+    retention_d7:    parseFloat(c.rolling_retention_d7 ?? c.retention_d7 ?? 0),
   }
 }
 
 // Fetch all campaigns in ONE API call and return a name → stats map.
-// Use this in the sync route instead of calling getLinkrunnerStats per pilot.
 export async function getAllCampaignStats(): Promise<Map<string, LinkrunnerCampaignStats>> {
   const map = new Map<string, LinkrunnerCampaignStats>()
   try {
@@ -57,10 +62,11 @@ export async function getAllCampaignStats(): Promise<Map<string, LinkrunnerCampa
     const campaigns: any[] = data?.data || data?.campaigns || data || []
 
     if (campaigns.length > 0) {
-      // Log once so we can verify field names from Vercel logs
-      console.log('[Linkrunner] field names:', Object.keys(campaigns[0]).join(', '))
+      // Full first-item dump so we can see exact field names in Vercel logs
+      console.log('[Linkrunner] campaigns count:', campaigns.length)
+      console.log('[Linkrunner] first campaign raw:', JSON.stringify(campaigns[0]))
     } else {
-      console.warn('[Linkrunner] no campaigns returned. Raw:', JSON.stringify(data).slice(0, 200))
+      console.warn('[Linkrunner] no campaigns returned. Full raw response:', JSON.stringify(data).slice(0, 500))
     }
 
     for (const c of campaigns) {
