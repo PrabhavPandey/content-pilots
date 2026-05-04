@@ -32,7 +32,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <form action={async () => { 'use server'; await signOut({ redirectTo: '/login' }) }}>
               <button
                 type="submit"
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                className="text-xs font-medium text-gray-500 border border-gray-200 rounded px-3 py-1.5 hover:text-gray-800 hover:border-gray-400 hover:bg-gray-50 active:bg-gray-100 transition-all duration-150"
+                style={{ fontFamily: 'var(--font-inconsolata)' }}
               >
                 Sign out
               </button>

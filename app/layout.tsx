@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Roboto, Inconsolata } from "next/font/google";
+import { Poppins, Roboto, Inconsolata, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -20,6 +20,13 @@ const inconsolata = Inconsolata({
   variable: "--font-inconsolata",
 });
 
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-playfair",
+});
+
 export const metadata: Metadata = {
   title: "TAL Pilot Tracker",
   description: "UGC & Influencer Marketing Pilot Dashboard",
@@ -28,7 +35,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${poppins.variable} ${roboto.variable} ${inconsolata.variable} min-h-full bg-white text-gray-900`}
+      <body className={`${poppins.variable} ${roboto.variable} ${inconsolata.variable} ${playfair.variable} min-h-full bg-white text-gray-900`}
         style={{ fontFamily: "var(--font-roboto), sans-serif" }}>
         {children}
       </body>

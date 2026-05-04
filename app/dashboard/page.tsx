@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getLatestMetrics } from '@/lib/db'
 import PilotCard from '@/components/PilotCard'
 import SyncBadge from '@/components/SyncBadge'
+import QualificationCarousel from '@/components/QualificationCarousel'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,8 +77,18 @@ export default async function DashboardPage() {
           </section>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {metrics.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
+        <div>
+          <QualificationCarousel />
+          <div className="space-y-4">
+            {metrics.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
+          </div>
+          {/* Tagline */}
+          <p
+            className="text-center text-sm text-gray-300 mt-16 mb-2 italic"
+            style={{ fontFamily: 'var(--font-playfair)' }}
+          >
+            make magic · one reel at a time
+          </p>
         </div>
       )}
     </div>
