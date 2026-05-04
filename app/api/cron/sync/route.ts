@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch pilots' }, { status: 500 })
   }
 
-  const campaignNames = pilots.map(p => p.linkrunner_campaign_name)
+  // Normalize to lowercase - lrMap and mpMap both use lowercase keys
+  const campaignNames = pilots.map(p => p.linkrunner_campaign_name?.toLowerCase().trim() ?? '')
 
   // ── 3 parallel API calls: Linkrunner + Mixpanel + Metabase ──────────────
   const [lrMap, mpMap, metabaseUsers] = await Promise.allSettled([
@@ -50,6 +51,8 @@ export async function GET(req: NextRequest) {
   ] as const)
 
   console.log(`Linkrunner: ${(lrMap as Map<any,any>).size} campaigns | Metabase: ${(metabaseUsers as any[]).length} users`)
+  console.log(`Linkrunner keys: [${[...(lrMap as Map<any,any>).keys()].join(', ')}]`)
+  console.log(`Pilot campaign keys: [${campaignNames.join(', ')}]`)
 
   // Build phone → company map, filtered to campaign-attributed phones only
   const allAttributedPhones = new Set<string>()
@@ -79,8 +82,9 @@ export async function GET(req: NextRequest) {
 
   for (const pilot of pilots) {
     try {
-      const lrStats = (lrMap as Map<string, any>).get(pilot.linkrunner_campaign_name) ?? null
-      const mpData = (mpMap as Map<string, any>).get(pilot.linkrunner_campaign_name) ?? { first_app_opens: 0, users: [] }
+      const campaignKey = pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? ''
+      const lrStats = (lrMap as Map<string, any>).get(campaignKey) ?? null
+      const mpData = (mpMap as Map<string, any>).get(campaignKey) ?? { first_app_opens: 0, users: [] }
 
       let qualifiedInstalls = 0
       for (const mpUser of mpData.users) {

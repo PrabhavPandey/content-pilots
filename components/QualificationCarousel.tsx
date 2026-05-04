@@ -21,12 +21,12 @@ const SLIDES = [
   {
     step: '04',
     title: 'Qualified city',
-    body: 'They're based in Bangalore, Mumbai, Delhi, Gurgaon, Hyderabad, or Pune.',
+    body: "They're based in Bangalore, Mumbai, Delhi, Gurgaon, Hyderabad, or Pune.",
   },
   {
     step: '05',
     title: 'Startup or tech company',
-    body: 'They work at a funded startup or product-first tech company — not IT services or outsourcing.',
+    body: 'They work at a funded startup or product-first tech company - not IT services or outsourcing.',
   },
 ]
 
