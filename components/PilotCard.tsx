@@ -8,7 +8,6 @@ function pct(n: number) {
   return `${Number(n).toFixed(1)}%`
 }
 
-// Returns delta info if there's a meaningful change since last sync
 function delta(curr: number, prev: number | undefined): { text: string; up: boolean } | null {
   if (prev === undefined || prev === null) return null
   const d = curr - prev
@@ -27,14 +26,16 @@ const TYPE_PILL: Record<string, string> = {
 }
 
 const QUALIFIED_TOOLTIP =
-  'Clicked your link → installed TAL → completed onboarding → in a qualified city (Bangalore, Mumbai, Delhi, Gurgaon, Hyderabad, Pune) → works at a funded startup or tech company'
+  'Installed TAL via your link → completed onboarding → based in a qualified city (Bangalore, Mumbai, Delhi, Gurgaon, Hyderabad, Pune) → works at a funded startup or tech company'
+
+const INSTALLS_TOOLTIP =
+  'App installs directly attributed to your campaign link by Linkrunner'
 
 export default function PilotCard({ metrics: m }: Props) {
   const typeLabel = TYPE_LABEL[m.pilot.type] ?? m.pilot.type.toUpperCase()
   const typePill = TYPE_PILL[m.pilot.type] ?? 'bg-gray-100 text-gray-600'
 
   const qualifiedDelta = delta(m.qualified_installs, m.prev?.qualified_installs)
-  const clicksDelta = delta(m.lr_clicks, m.prev?.lr_clicks)
   const installsDelta = delta(m.lr_installs, m.prev?.lr_installs)
 
   return (
@@ -82,52 +83,94 @@ export default function PilotCard({ metrics: m }: Props) {
         </div>
       </div>
 
-      {/* Funnel row */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {[
-          { label: 'Clicks', value: m.lr_clicks.toLocaleString(), d: clicksDelta },
-          { label: 'Installs', value: m.lr_installs.toLocaleString(), d: installsDelta },
-          { label: 'Qualified', value: m.qualified_installs.toLocaleString(), d: qualifiedDelta },
-        ].map(({ label, value, d: dd }) => (
-          <div key={label}>
-            <div className="flex items-baseline gap-1">
-              <div className="text-lg font-semibold text-gray-700 tabular-nums">{value}</div>
-              {dd && (
-                <span
-                  className={`text-xs font-semibold tabular-nums ${dd.up ? 'text-green-500' : 'text-red-400'}`}
-                  style={{ fontFamily: 'var(--font-inconsolata)' }}
-                >
-                  {dd.text}
-                </span>
-              )}
+      {/* Two core metrics: Installs → Qualified */}
+      <div className="grid grid-cols-2 gap-6 mb-6">
+        {/* Installs */}
+        <div>
+          <div className="flex items-baseline gap-1">
+            <div className="text-2xl font-semibold text-gray-700 tabular-nums">
+              {m.lr_installs.toLocaleString()}
             </div>
-            <div
-              className="text-xs text-gray-400 mt-0.5"
+            {installsDelta && (
+              <span
+                className={`text-xs font-semibold tabular-nums ${installsDelta.up ? 'text-green-500' : 'text-red-400'}`}
+                style={{ fontFamily: 'var(--font-inconsolata)' }}
+              >
+                {installsDelta.text}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 mt-0.5">
+            <span
+              className="text-xs text-gray-400"
               style={{ fontFamily: 'var(--font-inconsolata)' }}
             >
-              {label}
+              Installs
+            </span>
+            <span className="text-xs text-gray-300 cursor-help leading-none" title={INSTALLS_TOOLTIP}>ⓘ</span>
+          </div>
+        </div>
+
+        {/* Signups */}
+        <div>
+          <div className="flex items-baseline gap-1">
+            <div className="text-2xl font-semibold text-gray-700 tabular-nums">
+              {m.lr_signups.toLocaleString()}
             </div>
           </div>
-        ))}
+          <div
+            className="text-xs text-gray-400 mt-0.5"
+            style={{ fontFamily: 'var(--font-inconsolata)' }}
+          >
+            Signups
+          </div>
+        </div>
       </div>
 
-      {/* Rates */}
-      <div className="border-t border-gray-100 pt-4 space-y-2">
-        {[
-          { label: 'Click → Install', value: pct(m.click_to_install_rate) },
-          { label: 'Install → Qualified', value: pct(m.install_to_qualified_rate) },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">{label}</span>
+      {/* Funnel bar: visual install → qualified */}
+      {m.lr_installs > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-400">Install → Qualified</span>
             <span
-              className="text-xs font-semibold text-gray-700 tabular-nums"
+              className="text-xs font-semibold text-gray-600 tabular-nums"
               style={{ fontFamily: 'var(--font-inconsolata)' }}
             >
-              {value}
+              {pct(m.install_to_qualified_rate)}
             </span>
           </div>
-        ))}
-      </div>
+          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gray-400 rounded-full transition-all"
+              style={{ width: `${Math.min(m.install_to_qualified_rate, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Retention row — only show if we have data */}
+      {(m.lr_retention_d1 > 0 || m.lr_retention_d7 > 0) && (
+        <div className="border-t border-gray-100 pt-4 flex gap-6">
+          <div>
+            <div
+              className="text-xs font-semibold text-gray-600 tabular-nums"
+              style={{ fontFamily: 'var(--font-inconsolata)' }}
+            >
+              {pct(m.lr_retention_d1)}
+            </div>
+            <div className="text-xs text-gray-400">D1 retention</div>
+          </div>
+          <div>
+            <div
+              className="text-xs font-semibold text-gray-600 tabular-nums"
+              style={{ fontFamily: 'var(--font-inconsolata)' }}
+            >
+              {pct(m.lr_retention_d7)}
+            </div>
+            <div className="text-xs text-gray-400">D7 retention</div>
+          </div>
+        </div>
+      )}
 
       {/* No-data state */}
       {!m.hasData && (
