@@ -84,7 +84,7 @@ export default async function DashboardPage() {
           </div>
           {/* Tagline */}
           <p
-            className="text-center text-sm text-gray-300 mt-16 mb-2 italic"
+            className="text-center text-sm text-gray-500 mt-16 mb-2 italic"
             style={{ fontFamily: 'var(--font-playfair)' }}
           >
             make magic · one reel at a time

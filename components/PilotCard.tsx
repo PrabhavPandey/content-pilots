@@ -36,7 +36,6 @@ export default function PilotCard({ metrics: m }: Props) {
   const qualifiedDelta = delta(m.qualified_installs, m.prev?.qualified_installs)
   const clicksDelta = delta(m.lr_clicks, m.prev?.lr_clicks)
   const installsDelta = delta(m.lr_installs, m.prev?.lr_installs)
-  const opensDelta = delta(m.mp_first_app_opens, m.prev?.mp_first_app_opens)
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors">
@@ -88,7 +87,7 @@ export default function PilotCard({ metrics: m }: Props) {
         {[
           { label: 'Clicks', value: m.lr_clicks.toLocaleString(), d: clicksDelta },
           { label: 'Installs', value: m.lr_installs.toLocaleString(), d: installsDelta },
-          { label: 'First open', value: m.mp_first_app_opens.toLocaleString(), d: opensDelta },
+          { label: 'Qualified', value: m.qualified_installs.toLocaleString(), d: qualifiedDelta },
         ].map(({ label, value, d: dd }) => (
           <div key={label}>
             <div className="flex items-baseline gap-1">
