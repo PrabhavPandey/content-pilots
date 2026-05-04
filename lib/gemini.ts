@@ -1,6 +1,6 @@
 // Gemini qualification judge
 // Only called for companies of users who clicked a campaign link AND onboarded.
-// Results are cached permanently in Supabase - each company is classified once, ever.
+// Results cached permanently in Supabase - each company is classified once, ever.
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getServiceClient } from './db'
@@ -43,52 +43,36 @@ If uncertain but the company sounds like a startup or tech company, lean toward 
 
 Respond with exactly one word: QUALIFIED or NOT_QUALIFIED`
 
-// In-memory cache for the current function invocation (Supabase is the persistent layer)
+// In-memory cache for this function invocation
 const sessionCache = new Map<string, boolean>()
 
-// Classify a single company. Accepts an optional db client to avoid creating one per call.
-async function classifyOne(company: string, db: SupabaseClient): Promise<boolean> {
-  const key = company.toLowerCase().trim()
-
-  if (sessionCache.has(key)) return sessionCache.get(key)!
-
-  // Check Supabase cache first
-  const { data: cached } = await db
-    .from('company_classifications')
-    .select('is_startup')
-    .eq('company_name', key)
-    .maybeSingle()
-
-  if (cached !== null && cached !== undefined) {
-    sessionCache.set(key, cached.is_startup)
-    return cached.is_startup
-  }
-
-  // Not cached - call Gemini
+// Call Gemini and persist result. Only call this when we KNOW the company is not cached.
+async function callGemini(companyKey: string, db: SupabaseClient): Promise<boolean> {
   try {
-    const prompt = QUALIFICATION_PROMPT.replace('{company}', company)
+    const prompt = QUALIFICATION_PROMPT.replace('{company}', companyKey)
     const result = await model.generateContent(prompt)
     const text = result.response.text().trim().toUpperCase()
     const isQualified = text.includes('QUALIFIED') && !text.includes('NOT_QUALIFIED')
 
     await db.from('company_classifications').upsert({
-      company_name: key,
+      company_name: companyKey,
       is_startup: isQualified,
       classified_at: new Date().toISOString(),
     }, { onConflict: 'company_name' })
 
-    sessionCache.set(key, isQualified)
-    console.log(`Gemini: "${company}" → ${isQualified ? 'startup' : 'not startup'}`)
+    sessionCache.set(companyKey, isQualified)
+    console.log(`Gemini: "${companyKey}" → ${isQualified ? 'startup' : 'not startup'}`)
     return isQualified
   } catch (err) {
-    console.error(`Gemini classification failed for "${company}":`, err)
+    console.error(`Gemini failed for "${companyKey}":`, err)
     return false
   }
 }
 
-// Batch classify a list of companies.
-// Accepts an optional db client - pass it from the caller to avoid N client instantiations.
-// Only calls Gemini for companies not already in Supabase or session cache.
+// Batch classify companies.
+// 1. Single Supabase query for all → split into cached / uncached.
+// 2. For uncached: call Gemini in parallel batches of 5 (no redundant DB check per company).
+// 3. Returns a map of company_name → is_startup.
 export async function batchClassifyCompanies(
   companies: string[],
   dbClient?: SupabaseClient
@@ -99,7 +83,7 @@ export async function batchClassifyCompanies(
   const db = dbClient ?? getServiceClient()
   const unique = [...new Set(companies.map(c => c?.toLowerCase().trim()).filter(Boolean))]
 
-  // Batch-check Supabase cache in a single query
+  // Single bulk Supabase lookup
   const { data: cached } = await db
     .from('company_classifications')
     .select('company_name, is_startup')
@@ -107,23 +91,21 @@ export async function batchClassifyCompanies(
 
   const cachedMap = new Map((cached ?? []).map(r => [r.company_name, r.is_startup]))
 
-  // Only call Gemini for what's not cached anywhere
+  // Session cache hits + Supabase hits
   const uncached = unique.filter(c => !cachedMap.has(c) && !sessionCache.has(c))
 
   if (uncached.length > 0) {
-    console.log(`Gemini: ${cachedMap.size} from cache, ${uncached.length} need classification`)
-    // Process concurrently in batches of 5 to respect rate limits
+    console.log(`Gemini: ${cachedMap.size + sessionCache.size} cached, ${uncached.length} to classify`)
+    // Parallel batches of 5 — no per-company Supabase check (already done above)
     for (let i = 0; i < uncached.length; i += 5) {
       const batch = uncached.slice(i, i + 5)
-      await Promise.all(batch.map(c => classifyOne(c, db)))
-      // Only delay between batches when there are more to process
+      await Promise.all(batch.map(c => callGemini(c, db)))
       if (i + 5 < uncached.length) await new Promise(r => setTimeout(r, 200))
     }
   } else {
-    console.log(`Gemini: all ${unique.length} companies served from cache, 0 API calls`)
+    console.log(`Gemini: all ${unique.length} from cache — 0 API calls`)
   }
 
-  // Build final map
   for (const company of companies) {
     const key = company?.toLowerCase().trim()
     if (!key) { results.set(company, false); continue }
