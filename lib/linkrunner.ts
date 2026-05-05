@@ -1,9 +1,13 @@
-// Linkrunner Data API client
-// Docs: https://docs.linkrunner.io/api-reference/data-apis
-// Base: https://api.linkrunner.io/api/v1/
-// Response shape: { msg, status, data: { total_campaigns, campaigns: Campaign[] } }
-// Campaign fields: display_id, name, active, attributed_users (number = installs), ...
-// Note: clicks are at a separate endpoint (TBD). attributed_users = installs.
+// Linkrunner Reporting API client
+// Docs: https://docs.linkrunner.io/api-reference/reporting
+// Base URL: https://api.linkrunner.io/api/v1
+//
+// Uses GET /reporting/campaigns - returns clicks, installs, sign-ups, retention, spend, etc.
+// Numeric fields come back as formatted strings ("3,201") or raw numbers - we handle both.
+// Rate limit: 1 req/min per API key. We fetch all pages in sequence, not parallel.
+//
+// CONFIRMED fields (live-tested 2026-05-05):
+//   clicks, installs, "sign-ups" - all present and matching Linkrunner dashboard values
 
 const BASE_URL = 'https://api.linkrunner.io/api'
 
@@ -11,11 +15,7 @@ export type LinkrunnerCampaignStats = {
   campaign_name: string
   clicks: number
   installs: number
-  reinstalls: number
   signups: number
-  conversion_rate: number
-  retention_d1: number
-  retention_d7: number
 }
 
 async function linkrunnerFetch(path: string, params?: Record<string, string>) {
@@ -39,47 +39,57 @@ async function linkrunnerFetch(path: string, params?: Record<string, string>) {
   return res.json()
 }
 
-function parseCampaign(c: any, nameOverride?: string): LinkrunnerCampaignStats {
-  // attributed_users is the confirmed field for installs (it's a number)
-  // clicks: no aggregate field found yet in campaign list - tracked separately
+// Parse a field that may be a formatted string ("3,201") or a raw number
+function parseNum(v: any): number {
+  if (v === null || v === undefined) return 0
+  if (typeof v === 'number') return v
+  return Number(String(v).replace(/[^0-9.-]/g, '')) || 0
+}
+
+function parseCampaign(c: any): LinkrunnerCampaignStats {
   return {
-    campaign_name:   nameOverride ?? c.name ?? '',
-    clicks:          c.clicks ?? c.total_clicks ?? c.click_count ?? 0,
-    installs:        c.attributed_users ?? c.installs ?? 0,
-    reinstalls:      c.reinstalls ?? 0,
-    signups:         c.sign_ups ?? c.signups ?? 0,
-    conversion_rate: parseFloat(c.conversion ?? c.conversion_rate ?? 0),
-    retention_d1:    parseFloat(c.rolling_retention_d1 ?? c.retention_d1 ?? 0),
-    retention_d7:    parseFloat(c.rolling_retention_d7 ?? c.retention_d7 ?? 0),
+    campaign_name: (c.name ?? '').toLowerCase().trim(),
+    clicks:        parseNum(c.clicks),
+    installs:      parseNum(c.installs),
+    signups:       parseNum(c['sign-ups'] ?? c.signups ?? 0),
   }
 }
 
-// Fetch all campaigns in ONE API call and return a name → stats map.
+// Fetch ALL campaigns from the Reporting API and return a lowercase-name → stats map.
+// Rate limit is 1 req/min so we fetch pages sequentially. In practice all 6 pilot
+// campaigns fit on page 1 (limit=100).
 export async function getAllCampaignStats(): Promise<Map<string, LinkrunnerCampaignStats>> {
   const map = new Map<string, LinkrunnerCampaignStats>()
   try {
-    const data = await linkrunnerFetch('/v1/campaigns')
+    const first = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100' })
+    const page1: any[] = first?.data?.campaigns ?? []
+    const totalPages: number = first?.data?.pagination?.pages ?? 1
 
-    // Confirmed response shape: { data: { total_campaigns, campaigns: [...] } }
-    const campaigns: any[] = data?.data?.campaigns ?? data?.data ?? data?.campaigns ?? []
+    console.log(`[Linkrunner] reporting page 1/${totalPages}, ${page1.length} campaigns`)
 
-    if (campaigns.length > 0) {
-      console.log(`[Linkrunner] ${campaigns.length} campaigns. First: ${JSON.stringify(campaigns[0])}`)
-    } else {
-      console.warn('[Linkrunner] no campaigns. Raw:', JSON.stringify(data).slice(0, 400))
-    }
-
-    for (const c of campaigns) {
+    for (const c of page1) {
       const name = (c.name ?? '').toLowerCase().trim()
-      if (name) map.set(name, parseCampaign(c, name))
+      if (name) map.set(name, parseCampaign(c))
     }
+
+    // Fetch remaining pages sequentially (rate limit: 1 req/min)
+    for (let p = 2; p <= totalPages; p++) {
+      const page = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: String(p) })
+      const campaigns: any[] = page?.data?.campaigns ?? []
+      for (const c of campaigns) {
+        const name = (c.name ?? '').toLowerCase().trim()
+        if (name) map.set(name, parseCampaign(c))
+      }
+    }
+
+    console.log(`[Linkrunner] loaded ${map.size} campaigns with clicks+installs+signups`)
   } catch (err) {
     console.error('Linkrunner getAllCampaignStats failed:', err)
   }
   return map
 }
 
-// Single-campaign lookup kept for backwards compatibility / ad-hoc use
+// Single-campaign lookup
 export async function getLinkrunnerStats(campaignName: string): Promise<LinkrunnerCampaignStats | null> {
   const all = await getAllCampaignStats()
   return all.get(campaignName.toLowerCase().trim()) ?? null

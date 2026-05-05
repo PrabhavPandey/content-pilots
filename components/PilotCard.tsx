@@ -17,166 +17,153 @@ function delta(curr: number, prev: number | undefined): { text: string; up: bool
 
 const TYPE_LABEL: Record<string, string> = {
   influencer: 'Influencer',
-  ugc: 'UGC',
+  ugc:        'UGC',
 }
 
 const TYPE_PILL: Record<string, string> = {
-  influencer: 'bg-violet-50 text-violet-600',
-  ugc: 'bg-blue-50 text-blue-600',
+  influencer: 'bg-violet-50 text-violet-500',
+  ugc:        'bg-sky-50 text-sky-500',
 }
-
-const QUALIFIED_TOOLTIP =
-  'Installed TAL via your link → completed onboarding → based in a qualified city (Bangalore, Mumbai, Delhi, Gurgaon, Hyderabad, Pune) → works at a funded startup or tech company'
-
-const INSTALLS_TOOLTIP =
-  'App installs directly attributed to your campaign link by Linkrunner'
 
 export default function PilotCard({ metrics: m }: Props) {
   const typeLabel = TYPE_LABEL[m.pilot.type] ?? m.pilot.type.toUpperCase()
-  const typePill = TYPE_PILL[m.pilot.type] ?? 'bg-gray-100 text-gray-600'
+  const typePill  = TYPE_PILL[m.pilot.type]  ?? 'bg-zinc-100 text-zinc-500'
 
   const qualifiedDelta = delta(m.qualified_installs, m.prev?.qualified_installs)
-  const installsDelta = delta(m.lr_installs, m.prev?.lr_installs)
+  const installsDelta  = delta(m.lr_installs,        m.prev?.lr_installs)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors">
-
-      {/* Header */}
+    <div
+      className="rounded-2xl p-7 transition-shadow hover:shadow-md"
+      style={{
+        background: 'var(--bg-card)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)',
+      }}
+    >
+      {/* Header row */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3
-            className="text-base font-semibold text-gray-900 leading-tight"
-            style={{ fontFamily: 'var(--font-poppins)' }}
+            className="text-[15px] font-semibold leading-tight"
+            style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
           >
             {m.pilot.name}
           </h3>
           <span
-            className={`inline-block text-xs font-medium px-2 py-0.5 rounded mt-1.5 ${typePill}`}
+            className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mt-1.5 tracking-wide ${typePill}`}
             style={{ fontFamily: 'var(--font-inconsolata)' }}
           >
             {typeLabel}
           </span>
         </div>
+
+        {/* Qualified installs - hero number */}
         <div className="text-right">
-          <div className="flex items-start justify-end gap-2">
-            <div className="text-3xl font-bold text-gray-900 tabular-nums leading-none">
+          <div className="flex items-start justify-end gap-1.5">
+            <span
+              className="text-4xl font-bold tabular-nums leading-none"
+              style={{ color: 'var(--text-primary)' }}
+            >
               {m.qualified_installs.toLocaleString()}
-            </div>
+            </span>
             {qualifiedDelta && (
               <span
-                className={`text-xs font-semibold mt-1 tabular-nums ${qualifiedDelta.up ? 'text-green-500' : 'text-red-400'}`}
+                className={`text-xs font-semibold mt-1 tabular-nums ${qualifiedDelta.up ? 'text-emerald-500' : 'text-red-400'}`}
                 style={{ fontFamily: 'var(--font-inconsolata)' }}
               >
                 {qualifiedDelta.text}
               </span>
             )}
           </div>
-          <div className="flex items-center justify-end gap-1 mt-1">
-            <span className="text-xs text-gray-400">qualified installs</span>
-            <span
-              className="text-xs text-gray-300 cursor-help leading-none"
-              title={QUALIFIED_TOOLTIP}
-            >
-              ⓘ
-            </span>
-          </div>
+          <span
+            className="text-[11px] font-medium tracking-wider uppercase mt-1 block"
+            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+          >
+            Qualified
+          </span>
         </div>
       </div>
 
-      {/* Two core metrics: Installs → Qualified */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      {/* Divider */}
+      <div className="h-px mb-6" style={{ background: '#F0EDE8' }} />
+
+      {/* Metrics row: Clicks · Installs */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Clicks */}
+        <div>
+          <div className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+            {m.lr_clicks > 0 ? m.lr_clicks.toLocaleString() : '—'}
+          </div>
+          <div
+            className="text-[11px] font-medium tracking-wider uppercase mt-0.5"
+            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+          >
+            Clicks
+          </div>
+        </div>
+
         {/* Installs */}
         <div>
-          <div className="flex items-baseline gap-1">
-            <div className="text-2xl font-semibold text-gray-700 tabular-nums">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
               {m.lr_installs.toLocaleString()}
-            </div>
+            </span>
             {installsDelta && (
               <span
-                className={`text-xs font-semibold tabular-nums ${installsDelta.up ? 'text-green-500' : 'text-red-400'}`}
+                className={`text-xs font-semibold tabular-nums ${installsDelta.up ? 'text-emerald-500' : 'text-red-400'}`}
                 style={{ fontFamily: 'var(--font-inconsolata)' }}
               >
                 {installsDelta.text}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 mt-0.5">
-            <span
-              className="text-xs text-gray-400"
-              style={{ fontFamily: 'var(--font-inconsolata)' }}
-            >
-              Installs
-            </span>
-            <span className="text-xs text-gray-300 cursor-help leading-none" title={INSTALLS_TOOLTIP}>ⓘ</span>
-          </div>
-        </div>
-
-        {/* Signups */}
-        <div>
-          <div className="flex items-baseline gap-1">
-            <div className="text-2xl font-semibold text-gray-700 tabular-nums">
-              {m.lr_signups.toLocaleString()}
-            </div>
-          </div>
           <div
-            className="text-xs text-gray-400 mt-0.5"
-            style={{ fontFamily: 'var(--font-inconsolata)' }}
+            className="text-[11px] font-medium tracking-wider uppercase mt-0.5"
+            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
-            Signups
+            Installs
           </div>
         </div>
       </div>
 
-      {/* Funnel bar: visual install → qualified */}
+      {/* Funnel bar — only shows after first real sync */}
       {m.lr_installs > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-400">Install → Qualified</span>
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-1.5">
             <span
-              className="text-xs font-semibold text-gray-600 tabular-nums"
-              style={{ fontFamily: 'var(--font-inconsolata)' }}
+              className="text-[11px] font-medium tracking-wider uppercase"
+              style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+            >
+              Install → Qualified
+            </span>
+            <span
+              className="text-[11px] font-semibold tabular-nums"
+              style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-secondary)' }}
             >
               {pct(m.install_to_qualified_rate)}
             </span>
           </div>
-          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-[3px] rounded-full overflow-hidden" style={{ background: '#EEEBE5' }}>
             <div
-              className="h-full bg-gray-400 rounded-full transition-all"
-              style={{ width: `${Math.min(m.install_to_qualified_rate, 100)}%` }}
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(m.install_to_qualified_rate, 100)}%`,
+                background: '#18181B',
+              }}
             />
-          </div>
-        </div>
-      )}
-
-      {/* Retention row — only show if we have data */}
-      {(m.lr_retention_d1 > 0 || m.lr_retention_d7 > 0) && (
-        <div className="border-t border-gray-100 pt-4 flex gap-6">
-          <div>
-            <div
-              className="text-xs font-semibold text-gray-600 tabular-nums"
-              style={{ fontFamily: 'var(--font-inconsolata)' }}
-            >
-              {pct(m.lr_retention_d1)}
-            </div>
-            <div className="text-xs text-gray-400">D1 retention</div>
-          </div>
-          <div>
-            <div
-              className="text-xs font-semibold text-gray-600 tabular-nums"
-              style={{ fontFamily: 'var(--font-inconsolata)' }}
-            >
-              {pct(m.lr_retention_d7)}
-            </div>
-            <div className="text-xs text-gray-400">D7 retention</div>
           </div>
         </div>
       )}
 
       {/* No-data state */}
       {!m.hasData && (
-        <p className="text-xs text-gray-300 text-center mt-4">No sync data yet</p>
+        <p
+          className="text-xs text-center mt-5"
+          style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+        >
+          No sync yet
+        </p>
       )}
-
     </div>
   )
 }

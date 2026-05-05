@@ -95,18 +95,18 @@ export async function GET(req: NextRequest) {
         qualifiedInstalls++
       }
 
-      console.log(`${pilot.name}: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} opens=${mpData.first_app_opens} qualified=${qualifiedInstalls}`)
+      console.log(`${pilot.name}: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} opens(MP)=${mpData.first_app_opens} qualified=${qualifiedInstalls}`)
 
       const { error: insertError } = await db.from('pilot_metrics').insert({
         pilot_id: pilot.id,
         fetched_at: new Date().toISOString(),
-        lr_clicks: lrStats?.clicks ?? 0,
-        lr_installs: lrStats?.installs ?? 0,
-        lr_reinstalls: lrStats?.reinstalls ?? 0,
-        lr_signups: lrStats?.signups ?? 0,
-        lr_conversion_rate: lrStats?.conversion_rate ?? 0,
-        lr_retention_d1: lrStats?.retention_d1 ?? 0,
-        lr_retention_d7: lrStats?.retention_d7 ?? 0,
+        lr_clicks:          lrStats?.clicks   ?? 0,
+        lr_installs:        lrStats?.installs  ?? 0,
+        lr_reinstalls:      0,
+        lr_signups:         lrStats?.signups   ?? 0,
+        lr_conversion_rate: 0,
+        lr_retention_d1:    0,
+        lr_retention_d7:    0,
         mp_first_app_opens: mpData.first_app_opens,
         qualified_installs: qualifiedInstalls,
       })

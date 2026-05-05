@@ -7,32 +7,36 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect('/login')
 
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="border-b border-gray-100 bg-white">
-        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
+      {/* Dark nav - frames the page */}
+      <nav style={{ background: '#18181B' }}>
+        <div className="max-w-4xl mx-auto px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span
-              className="text-xs font-semibold tracking-widest uppercase text-gray-400"
+              className="text-xs font-semibold tracking-[0.18em] uppercase text-zinc-400"
               style={{ fontFamily: 'var(--font-inconsolata)' }}
             >
               TAL
             </span>
-            <span className="text-gray-300">/</span>
+            <span className="text-zinc-700 text-xs">/</span>
             <span
-              className="text-xs font-semibold tracking-widest uppercase text-gray-400"
+              className="text-xs font-semibold tracking-[0.18em] uppercase text-zinc-400"
               style={{ fontFamily: 'var(--font-inconsolata)' }}
             >
               Pilot Tracker
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">
+            <span
+              className="text-xs text-zinc-500"
+              style={{ fontFamily: 'var(--font-inconsolata)' }}
+            >
               {session.user.role === 'admin' ? 'Admin' : session.user.name}
             </span>
             <form action={async () => { 'use server'; await signOut({ redirectTo: '/login' }) }}>
               <button
                 type="submit"
-                className="cursor-default text-xs font-medium text-gray-500 border border-gray-200 rounded px-3 py-1.5 hover:text-gray-800 hover:border-gray-400 hover:bg-gray-50 active:bg-gray-100 transition-all duration-150"
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-200 transition-colors"
                 style={{ fontFamily: 'var(--font-inconsolata)' }}
               >
                 Sign out
