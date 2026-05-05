@@ -1,7 +1,13 @@
 import { MetricsWithPilot } from '@/lib/db'
+import { formatInr } from '@/lib/pilot-config'
+import CopyLinkBox from './CopyLinkBox'
 
 type Props = {
   metrics: MetricsWithPilot
+  isAdmin?: boolean
+  budget?: number
+  linkrunnerUrl?: string
+  index?: number
 }
 
 function pct(n: number) {
@@ -17,51 +23,67 @@ function delta(curr: number, prev: number | undefined): { text: string; up: bool
 
 const TYPE_LABEL: Record<string, string> = {
   influencer: 'Influencer',
-  ugc:        'UGC',
+  ugc: 'UGC',
 }
 
-const TYPE_PILL: Record<string, string> = {
-  influencer: 'bg-violet-50 text-violet-500',
-  ugc:        'bg-sky-50 text-sky-500',
+const TYPE_PILL: Record<string, { bg: string; color: string }> = {
+  influencer: { bg: '#F3F0FF', color: '#7C3AED' },
+  ugc:        { bg: '#EFF6FF', color: '#3B82F6' },
 }
 
-export default function PilotCard({ metrics: m }: Props) {
+export default function PilotCard({
+  metrics: m,
+  isAdmin = false,
+  budget,
+  linkrunnerUrl,
+  index = 0,
+}: Props) {
   const typeLabel = TYPE_LABEL[m.pilot.type] ?? m.pilot.type.toUpperCase()
-  const typePill  = TYPE_PILL[m.pilot.type]  ?? 'bg-zinc-100 text-zinc-500'
+  const pill = TYPE_PILL[m.pilot.type] ?? { bg: '#F4F4F5', color: '#71717A' }
 
   const qualifiedDelta = delta(m.qualified_installs, m.prev?.qualified_installs)
-  const installsDelta  = delta(m.lr_installs,        m.prev?.lr_installs)
+  const installsDelta  = delta(m.lr_installs, m.prev?.lr_installs)
+
+  const costPerQualified =
+    budget && m.qualified_installs > 0
+      ? Math.round(budget / m.qualified_installs)
+      : null
 
   return (
     <div
-      className="rounded-2xl p-7 transition-shadow hover:shadow-md"
+      className="pilot-card fade-up rounded-2xl p-7"
       style={{
         background: 'var(--bg-card)',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        animationDelay: `${index * 55}ms`,
       }}
     >
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3
-            className="text-[15px] font-semibold leading-tight"
+            className="text-[15px] font-semibold leading-tight mb-2"
             style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
           >
             {m.pilot.name}
           </h3>
           <span
-            className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mt-1.5 tracking-wide ${typePill}`}
-            style={{ fontFamily: 'var(--font-inconsolata)' }}
+            className="inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full tracking-wide"
+            style={{
+              fontFamily: 'var(--font-inconsolata)',
+              background: pill.bg,
+              color: pill.color,
+            }}
           >
             {typeLabel}
           </span>
         </div>
 
-        {/* Qualified installs - hero number */}
+        {/* Qualified installs — hero number */}
         <div className="text-right">
           <div className="flex items-start justify-end gap-1.5">
             <span
-              className="text-4xl font-bold tabular-nums leading-none"
+              className="text-[40px] font-bold tabular-nums leading-none"
               style={{ color: 'var(--text-primary)' }}
             >
               {m.qualified_installs.toLocaleString()}
@@ -76,7 +98,7 @@ export default function PilotCard({ metrics: m }: Props) {
             )}
           </div>
           <span
-            className="text-[11px] font-medium tracking-wider uppercase mt-1 block"
+            className="text-[10px] font-semibold tracking-[0.2em] uppercase block mt-1"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Qualified
@@ -85,27 +107,31 @@ export default function PilotCard({ metrics: m }: Props) {
       </div>
 
       {/* Divider */}
-      <div className="h-px mb-6" style={{ background: '#F0EDE8' }} />
+      <div className="h-px mb-6" style={{ background: 'var(--border)' }} />
 
-      {/* Metrics row: Clicks · Installs */}
+      {/* Metrics row */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Clicks */}
         <div>
-          <div className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+          <div
+            className="text-2xl font-semibold tabular-nums mb-0.5"
+            style={{ color: 'var(--text-primary)' }}
+          >
             {m.lr_clicks > 0 ? m.lr_clicks.toLocaleString() : '—'}
           </div>
           <div
-            className="text-[11px] font-medium tracking-wider uppercase mt-0.5"
+            className="text-[10px] font-semibold tracking-[0.18em] uppercase"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Clicks
           </div>
         </div>
 
-        {/* Installs */}
         <div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+          <div className="flex items-baseline gap-1.5 mb-0.5">
+            <span
+              className="text-2xl font-semibold tabular-nums"
+              style={{ color: 'var(--text-primary)' }}
+            >
               {m.lr_installs.toLocaleString()}
             </span>
             {installsDelta && (
@@ -118,7 +144,7 @@ export default function PilotCard({ metrics: m }: Props) {
             )}
           </div>
           <div
-            className="text-[11px] font-medium tracking-wider uppercase mt-0.5"
+            className="text-[10px] font-semibold tracking-[0.18em] uppercase"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Installs
@@ -126,12 +152,12 @@ export default function PilotCard({ metrics: m }: Props) {
         </div>
       </div>
 
-      {/* Funnel bar — only shows after first real sync */}
+      {/* Funnel bar */}
       {m.lr_installs > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-1.5">
             <span
-              className="text-[11px] font-medium tracking-wider uppercase"
+              className="text-[10px] font-semibold tracking-[0.1em] uppercase"
               style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
             >
               Install → Qualified
@@ -143,25 +169,75 @@ export default function PilotCard({ metrics: m }: Props) {
               {pct(m.install_to_qualified_rate)}
             </span>
           </div>
-          <div className="h-[3px] rounded-full overflow-hidden" style={{ background: '#EEEBE5' }}>
+          <div className="h-[3px] rounded-full overflow-hidden" style={{ background: '#EFECE8' }}>
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full rounded-full"
               style={{
                 width: `${Math.min(m.install_to_qualified_rate, 100)}%`,
-                background: '#18181B',
+                background: '#1A1A1A',
+                transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             />
           </div>
         </div>
       )}
 
+      {/* Admin: budget */}
+      {isAdmin && (
+        <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <span
+                className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+              >
+                Budget
+              </span>
+              <span
+                className="text-[16px] font-semibold"
+                style={{
+                  fontFamily: 'var(--font-poppins)',
+                  color: budget ? 'var(--text-primary)' : 'var(--text-muted)',
+                }}
+              >
+                {budget ? formatInr(budget) : 'TBD'}
+              </span>
+            </div>
+            {budget && (
+              <div className="text-right">
+                <span
+                  className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
+                  style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+                >
+                  Cost / qualified
+                </span>
+                <span
+                  className="text-[16px] font-semibold"
+                  style={{
+                    fontFamily: 'var(--font-poppins)',
+                    color: costPerQualified ? 'var(--text-primary)' : 'var(--text-muted)',
+                  }}
+                >
+                  {costPerQualified ? formatInr(costPerQualified) : '—'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pilot: tracking link */}
+      {!isAdmin && linkrunnerUrl && (
+        <CopyLinkBox url={linkrunnerUrl} />
+      )}
+
       {/* No-data state */}
       {!m.hasData && (
         <p
-          className="text-xs text-center mt-5"
-          style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+          className="text-xs text-center mt-5 italic"
+          style={{ color: 'var(--text-muted)' }}
         >
-          No sync yet
+          No sync yet — data will appear shortly.
         </p>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getLatestMetrics } from '@/lib/db'
+import { getPilotMeta } from '@/lib/pilot-config'
 import PilotCard from '@/components/PilotCard'
 import SyncBadge from '@/components/SyncBadge'
 import QualificationCarousel from '@/components/QualificationCarousel'
@@ -21,27 +22,24 @@ export default async function DashboardPage() {
   const monthYear   = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   return (
-    <div>
+    <div className="fade-up">
       {/* Page header */}
       <div className="mb-10">
         {!isAdmin && (
           <p
-            className="text-xs font-medium tracking-wider uppercase mb-2"
+            className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-2"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Your Campaign
           </p>
         )}
         <h1
-          className="text-2xl font-semibold leading-tight"
+          className="text-[26px] font-semibold leading-tight"
           style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
         >
-          {isAdmin ? 'Pilots' : metrics[0]?.pilot.name ?? 'Dashboard'}
+          {isAdmin ? 'Pilots' : (metrics[0]?.pilot.name ?? 'Dashboard')}
         </h1>
-        <p
-          className="text-sm mt-1"
-          style={{ color: 'var(--text-muted)' }}
-        >
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           {isAdmin
             ? `UGC & Influencer · ${monthYear}`
             : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
@@ -51,33 +49,55 @@ export default async function DashboardPage() {
 
       {metrics.length === 0 ? (
         <div className="py-24 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-          No data yet. Trigger a sync to populate metrics.
+          No data yet — trigger a sync to populate metrics.
         </div>
       ) : isAdmin ? (
         <div className="space-y-10">
           {influencers.length > 0 && (
             <section>
               <p
-                className="text-[11px] font-semibold tracking-[0.15em] uppercase mb-4"
+                className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-4"
                 style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
               >
                 Influencer
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {influencers.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
+                {influencers.map((m, i) => {
+                  const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
+                  return (
+                    <PilotCard
+                      key={m.pilot_id}
+                      metrics={m}
+                      isAdmin
+                      budget={meta?.budget}
+                      index={i}
+                    />
+                  )
+                })}
               </div>
             </section>
           )}
           {ugc.length > 0 && (
             <section>
               <p
-                className="text-[11px] font-semibold tracking-[0.15em] uppercase mb-4"
+                className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-4"
                 style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
               >
                 UGC
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {ugc.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
+                {ugc.map((m, i) => {
+                  const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
+                  return (
+                    <PilotCard
+                      key={m.pilot_id}
+                      metrics={m}
+                      isAdmin
+                      budget={meta?.budget}
+                      index={i}
+                    />
+                  )
+                })}
               </div>
             </section>
           )}
@@ -86,7 +106,18 @@ export default async function DashboardPage() {
         <div>
           <QualificationCarousel />
           <div className="space-y-4">
-            {metrics.map(m => <PilotCard key={m.pilot_id} metrics={m} />)}
+            {metrics.map((m, i) => {
+              const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
+              return (
+                <PilotCard
+                  key={m.pilot_id}
+                  metrics={m}
+                  isAdmin={false}
+                  linkrunnerUrl={meta?.linkrunnerUrl}
+                  index={i}
+                />
+              )
+            })}
           </div>
           <p
             className="text-center text-sm mt-16 mb-2 italic"

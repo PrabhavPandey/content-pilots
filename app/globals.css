@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --bg-page:        #F5F3EF;
+  --bg-page:        #F7F5F2;
   --bg-card:        #FFFFFF;
-  --text-primary:   #18181B;
-  --text-secondary: #71717A;
-  --text-muted:     #A1A1AA;
+  --text-primary:   #1A1A1A;
+  --text-secondary: #6B7280;
+  --text-muted:     #9CA3AF;
+  --border:         #EAE6DF;
 }
 
 body {
@@ -16,3 +17,41 @@ body {
 }
 
 * { box-sizing: border-box; }
+
+/* ── Entrance animation ───────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Skeleton shimmer ─────────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: -600px 0; }
+  to   { background-position:  600px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #EFECE8 25%,
+    #E5E1DB 50%,
+    #EFECE8 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ── Card hover ───────────────────────────────────────── */
+.pilot-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pilot-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05) !important;
+  transform: translateY(-2px);
+}
