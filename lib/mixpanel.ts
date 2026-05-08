@@ -61,13 +61,9 @@ export async function getAllCampaignInstalls(
     const jqlScript = `
       function main() {
         var campaigns = ${JSON.stringify(campaignNames)};
-        var startMs = new Date('${PILOT_START_DATE}').getTime();
         return People()
           .filter(function(user) {
-            if (campaigns.indexOf(user.properties['attribution_campaign_name']) === -1) return false;
-            var created = user.properties['$created'];
-            if (!created) return false;
-            return new Date(created).getTime() >= startMs;
+            return campaigns.indexOf(user.properties['attribution_campaign_name']) !== -1;
           })
           .map(function(user) {
             return {
