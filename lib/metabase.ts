@@ -35,13 +35,12 @@ export type MetabaseUser = {
   company: string | null
 }
 
-// Fetch all onboarded users from question 498
-// 180-day lookback so early-pilot users don't fall out of the window
+// Fetch onboarded users from question 498, bounded to pilot start date onwards.
+// Pilot launched 2026-05-06 - no point fetching users who onboarded before that.
+const PILOT_START_DATE = '2026-05-06'
+
 export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
   const today = new Date()
-  const ninetyDaysAgo = new Date(today)
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 180)
-
   const fmt = (d: Date) => d.toISOString().split('T')[0]
 
   try {
@@ -52,7 +51,7 @@ export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
         parameters: [
           {
             type: 'date/single',
-            value: fmt(ninetyDaysAgo),
+            value: PILOT_START_DATE,
             target: ['variable', ['template-tag', 'start_date']],
           },
           {

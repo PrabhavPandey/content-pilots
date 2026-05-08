@@ -4,6 +4,9 @@
 const PROJECT_ID = process.env.MIXPANEL_PROJECT_ID ?? '3969008'
 const BASE_URL = 'https://mixpanel.com/api/2.0'
 
+// Pilots launched on May 6 2026 - only count users attributed from this date onwards
+export const PILOT_START_DATE = '2026-05-06'
+
 function getAuthHeader() {
   const username = process.env.MIXPANEL_SERVICE_ACCOUNT_USERNAME
   const secret = process.env.MIXPANEL_SERVICE_ACCOUNT_SECRET
@@ -58,9 +61,13 @@ export async function getAllCampaignInstalls(
     const jqlScript = `
       function main() {
         var campaigns = ${JSON.stringify(campaignNames)};
+        var startMs = new Date('${PILOT_START_DATE}').getTime();
         return People()
           .filter(function(user) {
-            return campaigns.indexOf(user.properties['attribution_campaign_name']) !== -1;
+            if (campaigns.indexOf(user.properties['attribution_campaign_name']) === -1) return false;
+            var created = user.properties['$created'];
+            if (!created) return false;
+            return new Date(created).getTime() >= startMs;
           })
           .map(function(user) {
             return {
