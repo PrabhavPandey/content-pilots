@@ -1,10 +1,16 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { signOut } from '@/lib/auth'
+import SignOutButton from '@/components/SignOutButton'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect('/login')
+
+  const signOutAction = async () => {
+    'use server'
+    await signOut({ redirectTo: '/login' })
+  }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
@@ -36,18 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             >
               {session.user.role === 'admin' ? 'Admin' : session.user.name}
             </span>
-            <form action={async () => { 'use server'; await signOut({ redirectTo: '/login' }) }}>
-              <button
-                type="submit"
-                className="text-[12px] font-medium text-zinc-300 hover:text-white hover:border-zinc-500 hover:bg-zinc-800 px-3 py-1.5 rounded-lg transition-all duration-150 cursor-pointer"
-                style={{
-                  fontFamily: 'var(--font-inconsolata)',
-                  border: '1px solid #3F3F3F',
-                }}
-              >
-                Sign out
-              </button>
-            </form>
+            <SignOutButton action={signOutAction} />
           </div>
 
         </div>
