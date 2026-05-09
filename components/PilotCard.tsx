@@ -79,38 +79,40 @@ export default function PilotCard({
           </span>
         </div>
 
-        {/* Qualified installs — hero number */}
-        <div className="text-right">
-          <div className="flex items-start justify-end gap-1.5">
-            <span
-              className="text-[40px] font-bold tabular-nums leading-none"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              {m.qualified_installs.toLocaleString()}
-            </span>
-            {qualifiedDelta && (
+        {/* Qualified installs hero — only shown for pilots, admin sees it in metrics row */}
+        {!isAdmin && (
+          <div className="text-right">
+            <div className="flex items-start justify-end gap-1.5">
               <span
-                className={`text-xs font-semibold mt-1 tabular-nums ${qualifiedDelta.up ? 'text-emerald-500' : 'text-red-400'}`}
-                style={{ fontFamily: 'var(--font-inconsolata)' }}
+                className="text-[40px] font-bold tabular-nums leading-none"
+                style={{ color: 'var(--text-primary)' }}
               >
-                {qualifiedDelta.text}
+                {m.qualified_installs.toLocaleString()}
               </span>
-            )}
+              {qualifiedDelta && (
+                <span
+                  className={`text-xs font-semibold mt-1 tabular-nums ${qualifiedDelta.up ? 'text-emerald-500' : 'text-red-400'}`}
+                  style={{ fontFamily: 'var(--font-inconsolata)' }}
+                >
+                  {qualifiedDelta.text}
+                </span>
+              )}
+            </div>
+            <span
+              className="text-[10px] font-semibold tracking-[0.2em] uppercase block mt-1"
+              style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+            >
+              Qualified
+            </span>
           </div>
-          <span
-            className="text-[10px] font-semibold tracking-[0.2em] uppercase block mt-1"
-            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-          >
-            Qualified
-          </span>
-        </div>
+        )}
       </div>
 
       {/* Divider */}
       <div className="h-px mb-6" style={{ background: 'var(--border)' }} />
 
       {/* Metrics row */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${isAdmin ? 'grid-cols-4' : 'grid-cols-2'}`}>
         <div>
           <div
             className="text-2xl font-semibold tabular-nums mb-0.5"
@@ -150,6 +152,40 @@ export default function PilotCard({
             Installs
           </div>
         </div>
+
+        {isAdmin && (
+          <>
+            <div>
+              <div
+                className="text-2xl font-semibold tabular-nums mb-0.5"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {m.lr_signups > 0 ? m.lr_signups.toLocaleString() : '—'}
+              </div>
+              <div
+                className="text-[10px] font-semibold tracking-[0.18em] uppercase"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+              >
+                Sign-ups
+              </div>
+            </div>
+
+            <div>
+              <div
+                className="text-2xl font-semibold tabular-nums mb-0.5"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {m.qualified_installs > 0 ? m.qualified_installs.toLocaleString() : '—'}
+              </div>
+              <div
+                className="text-[10px] font-semibold tracking-[0.18em] uppercase"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+              >
+                Qualified
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Funnel bar */}

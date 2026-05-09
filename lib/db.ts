@@ -41,6 +41,20 @@ export type PilotMetrics = {
   install_to_qualified_rate: number
 }
 
+export type PilotInstall = {
+  id: string
+  pilot_id: string
+  synced_at: string
+  phone: string | null
+  name: string | null
+  company: string | null
+  city: string | null
+  linkedin: string | null
+  is_city_qualified: boolean
+  is_company_qualified: boolean
+  is_qualified: boolean
+}
+
 export type User = {
   id: string
   username: string
@@ -112,4 +126,22 @@ export async function getLatestMetrics(pilotId?: string): Promise<MetricsWithPil
   }
 
   return results
+}
+
+// Fetch all onboarded installs across all pilots (admin only).
+// Returns a map of pilot_id → installs array.
+export async function getAllPilotInstalls(): Promise<Map<string, PilotInstall[]>> {
+  const db = getServiceClient()
+  const { data } = await db
+    .from('pilot_installs')
+    .select('*')
+    .order('is_qualified', { ascending: false })
+    .order('name', { ascending: true })
+
+  const map = new Map<string, PilotInstall[]>()
+  for (const row of data ?? []) {
+    if (!map.has(row.pilot_id)) map.set(row.pilot_id, [])
+    map.get(row.pilot_id)!.push(row)
+  }
+  return map
 }

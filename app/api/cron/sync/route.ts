@@ -54,17 +54,22 @@ export async function GET(req: NextRequest) {
   console.log(`Linkrunner keys: [${[...(lrMap as Map<any,any>).keys()].join(', ')}]`)
   console.log(`Pilot campaign keys: [${campaignNames.join(', ')}]`)
 
-  // Build phone → company map, filtered to campaign-attributed phones only
+  // Build phone lookup maps, filtered to campaign-attributed phones only
   const allAttributedPhones = new Set<string>()
   for (const name of campaignNames) {
     const bucket = (mpMap as Map<string, any>).get(name)
     bucket?.users.forEach((u: any) => { if (u.phone) allAttributedPhones.add(u.phone) })
   }
 
+  // phoneToCompany used for Gemini qualification (unchanged)
   const phoneToCompany = new Map<string, string>()
+  // phoneToMeta carries full user details for pilot_installs table
+  const phoneToMeta = new Map<string, { name: string | null; company: string | null; linkedin: string | null }>()
+
   for (const u of metabaseUsers as any[]) {
-    if (u.phone && u.company && allAttributedPhones.has(u.phone)) {
-      phoneToCompany.set(u.phone, u.company.toLowerCase().trim())
+    if (u.phone && allAttributedPhones.has(u.phone)) {
+      if (u.company) phoneToCompany.set(u.phone, u.company.toLowerCase().trim())
+      phoneToMeta.set(u.phone, { name: u.name ?? null, company: u.company ?? null, linkedin: u.linkedin ?? null })
     }
   }
 
@@ -87,19 +92,43 @@ export async function GET(req: NextRequest) {
       const mpData = (mpMap as Map<string, any>).get(campaignKey) ?? { first_app_opens: 0, users: [] }
 
       let qualifiedInstalls = 0
+      // Also collect onboarded users for pilot_installs table
+      const onboardedUsers: Array<{
+        phone: string; city: string | null
+        name: string | null; company: string | null; linkedin: string | null
+        is_city_qualified: boolean; is_company_qualified: boolean; is_qualified: boolean
+      }> = []
+
       for (const mpUser of mpData.users) {
-        if (!isCityQualified(mpUser.city)) continue
+        const meta = phoneToMeta.get(mpUser.phone)
+        if (!meta) continue // not found in Metabase - hasn't onboarded
+
+        const cityOk = isCityQualified(mpUser.city)
         const companyKey = phoneToCompany.get(mpUser.phone)
-        if (!companyKey) continue
-        if (!(companyMap.get(companyKey) ?? false)) continue
-        qualifiedInstalls++
+        const companyOk = companyKey ? (companyMap.get(companyKey) ?? false) : false
+        const isQualified = cityOk && companyOk
+
+        if (isQualified) qualifiedInstalls++
+
+        onboardedUsers.push({
+          phone:    mpUser.phone,
+          city:     mpUser.city ?? null,
+          name:     meta.name,
+          company:  meta.company,
+          linkedin: meta.linkedin,
+          is_city_qualified:    cityOk,
+          is_company_qualified: companyOk,
+          is_qualified:         isQualified,
+        })
       }
 
-      console.log(`${pilot.name}: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} opens(MP)=${mpData.first_app_opens} qualified=${qualifiedInstalls}`)
+      console.log(`${pilot.name}: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} opens(MP)=${mpData.first_app_opens} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}`)
+
+      const syncedAt = new Date().toISOString()
 
       const { error: insertError } = await db.from('pilot_metrics').insert({
         pilot_id: pilot.id,
-        fetched_at: new Date().toISOString(),
+        fetched_at: syncedAt,
         lr_clicks:          lrStats?.clicks   ?? 0,
         lr_installs:        lrStats?.installs  ?? 0,
         lr_reinstalls:      0,
@@ -112,7 +141,16 @@ export async function GET(req: NextRequest) {
       })
 
       if (insertError) throw insertError
-      results.push({ pilot: pilot.name, status: 'ok', qualifiedInstalls })
+
+      // Refresh pilot_installs: delete existing rows, insert fresh ones
+      await db.from('pilot_installs').delete().eq('pilot_id', pilot.id)
+      if (onboardedUsers.length > 0) {
+        await db.from('pilot_installs').insert(
+          onboardedUsers.map(u => ({ ...u, pilot_id: pilot.id, synced_at: syncedAt }))
+        )
+      }
+
+      results.push({ pilot: pilot.name, status: 'ok', qualifiedInstalls, onboarded: onboardedUsers.length })
     } catch (err: any) {
       console.error(`Failed to sync ${pilot.name}:`, err)
       errors.push({ pilot: pilot.name, error: err?.message ?? String(err) })

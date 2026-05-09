@@ -1,8 +1,9 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getLatestMetrics } from '@/lib/db'
+import { getLatestMetrics, getAllPilotInstalls } from '@/lib/db'
 import { getPilotMeta } from '@/lib/pilot-config'
 import PilotCard from '@/components/PilotCard'
+import InstallerTable from '@/components/InstallerTable'
 import SyncBadge from '@/components/SyncBadge'
 import QualificationCarousel from '@/components/QualificationCarousel'
 
@@ -15,6 +16,9 @@ export default async function DashboardPage() {
   const isAdmin = session.user.role === 'admin'
   const pilotId = session.user.pilotId ?? undefined
   const metrics = await getLatestMetrics(isAdmin ? undefined : pilotId)
+
+  // Admin-only: fetch onboarded installer records
+  const installsMap = isAdmin ? await getAllPilotInstalls() : new Map()
 
   const latestSync = metrics.find(m => m.fetched_at)?.fetched_at ?? null
   const influencers = metrics.filter(m => m.pilot.type === 'influencer')
@@ -61,17 +65,14 @@ export default async function DashboardPage() {
               >
                 Influencer
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4">
                 {influencers.map((m, i) => {
                   const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
                   return (
-                    <PilotCard
-                      key={m.pilot_id}
-                      metrics={m}
-                      isAdmin
-                      budget={meta?.budget}
-                      index={i}
-                    />
+                    <div key={m.pilot_id}>
+                      <PilotCard metrics={m} isAdmin budget={meta?.budget} index={i} />
+                      <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
+                    </div>
                   )
                 })}
               </div>
@@ -85,17 +86,14 @@ export default async function DashboardPage() {
               >
                 UGC
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4">
                 {ugc.map((m, i) => {
                   const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
                   return (
-                    <PilotCard
-                      key={m.pilot_id}
-                      metrics={m}
-                      isAdmin
-                      budget={meta?.budget}
-                      index={i}
-                    />
+                    <div key={m.pilot_id}>
+                      <PilotCard metrics={m} isAdmin budget={meta?.budget} index={i} />
+                      <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
+                    </div>
                   )
                 })}
               </div>
