@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
 
 const QUALIFICATION_PROMPT = `You are evaluating whether an Indian professional is a good install for TAL, a career platform for people at startups and tech companies in India.
 
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     gemini_working: !allErrored,
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.1-flash-lite-preview',
     results,
   })
 }
