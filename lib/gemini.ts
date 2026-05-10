@@ -7,9 +7,10 @@ import { getServiceClient } from './db'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+// googleSearch is valid at runtime for gemini-2.0-flash but not yet typed in SDK 0.24.x
 const model = genAI.getGenerativeModel({
   model: 'gemini-2.0-flash',
-  tools: [{ googleSearch: {} }],
+  tools: [{ googleSearch: {} } as any],
 })
 
 const QUALIFIED_CITIES = [
