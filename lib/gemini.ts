@@ -7,7 +7,10 @@ import { getServiceClient } from './db'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const model = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash',
+  tools: [{ googleSearch: {} }],
+})
 
 const QUALIFIED_CITIES = [
   'bangalore', 'bengaluru',
@@ -23,23 +26,25 @@ export function isCityQualified(city: string | null | undefined): boolean {
   return QUALIFIED_CITIES.some(c => city.toLowerCase().includes(c))
 }
 
-const QUALIFICATION_PROMPT = `You are evaluating whether a user who installed TAL (a career platform for professionals at funded startups in India) is a "qualified install" for marketing attribution.
+const QUALIFICATION_PROMPT = `You are evaluating whether someone is a qualified install for TAL, a career platform for professionals in India.
 
-TAL's target audience: engineers, developers, PMs, designers, and business/growth/strategy professionals working at funded startups or growth-stage tech companies in Indian metro cities.
+Company to evaluate: {company}
 
-User data:
-- Company: {company}
+Use web search to look up this company if you are not familiar with it.
 
-Evaluate the company. A user qualifies at the company level if:
-- Works at a funded startup, early-stage or growth-stage tech company, or a well-known product-first tech company
-- NOT at large IT outsourcing/services firms: TCS, Infosys, Wipro, Cognizant, HCL, Capgemini, Accenture, Tech Mahindra, Mphasis, L&T Infotech, and similar
-- NOT at government organizations or PSUs
-- NOT at educational institutions (colleges, schools, universities)
-- NOT unemployed, freelancing with no company, or student
-- NOT at a purely non-tech business (retail, FMCG, manufacturing, etc.) unless it is a funded tech-enabled startup
+QUALIFIED — include anyone working at:
+- Any startup, at any stage (seed, early, growth) and any size
+- Any product or tech company
+- Any well-known large tech company (Google, Amazon, Microsoft, Flipkart, etc.)
+- Any company that is not clearly in the disqualified list below
 
-If the company name is empty, null, "unemployed", or clearly a non-qualifying entity, respond NOT_QUALIFIED.
-If uncertain but the company sounds like a startup or tech company, lean toward QUALIFIED.
+NOT_QUALIFIED — exclude anyone working at:
+- Mass IT outsourcing and services firms: TCS, Infosys, Wipro, Cognizant, HCL, Capgemini, Accenture, Tech Mahindra, Mphasis, L&T Infotech, and similar companies whose primary business is IT staffing or outsourcing
+- Government organisations, PSUs, or public sector banks
+- Educational institutions: colleges, universities, schools
+- No company, unemployed, student, or freelancer with no employer
+
+If the company is unfamiliar or ambiguous, search for it. Default to QUALIFIED unless it clearly falls into the NOT_QUALIFIED list above.
 
 Respond with exactly one word: QUALIFIED or NOT_QUALIFIED`
 
