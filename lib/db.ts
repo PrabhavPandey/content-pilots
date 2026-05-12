@@ -50,6 +50,7 @@ export type PilotInstall = {
   company: string | null
   city: string | null
   linkedin: string | null
+  onboarded_at: string | null
   is_city_qualified: boolean
   is_company_qualified: boolean
   is_qualified: boolean

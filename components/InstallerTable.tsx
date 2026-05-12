@@ -1,12 +1,12 @@
 'use client'
 
-// Admin-only — collapsible installer table with search + sort
+// Admin-only — collapsible installer table with search + sort + detail modal
 // Never rendered for pilot (agency) accounts
 
 import { useState, useMemo } from 'react'
 import { PilotInstall } from '@/lib/db'
 
-type SortField = 'name' | 'company' | 'city' | 'is_qualified'
+type SortField = 'name' | 'company' | 'city' | 'is_qualified' | 'onboarded_at'
 type SortDir   = 'asc' | 'desc'
 
 function QualBadge({ ok }: { ok: boolean }) {
@@ -32,18 +32,127 @@ function SortIcon({ field, active, dir }: { field: string; active: boolean; dir:
   )
 }
 
+function formatDate(raw: string | null | undefined): string {
+  if (!raw) return '—'
+  try {
+    const d = new Date(raw)
+    if (isNaN(d.getTime())) return raw
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch {
+    return raw
+  }
+}
+
+function DetailModal({ install, onClose }: { install: PilotInstall; onClose: () => void }) {
+  const linkedinUrl = install.linkedin
+    ? (install.linkedin.startsWith('http') ? install.linkedin : `https://${install.linkedin}`)
+    : null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative rounded-2xl p-6 w-full max-w-sm mx-4"
+        style={{
+          background: '#FAFAF9',
+          border: '1px solid var(--border)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          fontFamily: 'var(--font-inconsolata)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-[18px] leading-none hover:opacity-60 transition-opacity"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          ×
+        </button>
+
+        {/* Name + qualified */}
+        <div className="mb-5">
+          <p
+            className="text-[16px] font-semibold leading-tight"
+            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-poppins)' }}
+          >
+            {install.name ?? '—'}
+          </p>
+          <div className="mt-1.5">
+            <QualBadge ok={install.is_qualified} />
+          </div>
+        </div>
+
+        {/* Fields */}
+        <div className="space-y-3">
+          <ModalRow label="Company"      value={install.company ?? '—'} />
+          <ModalRow label="City"         value={install.city ?? '—'} />
+          <ModalRow label="Onboarded"    value={formatDate(install.onboarded_at)} />
+          <ModalRow label="Phone"        value={install.phone ?? '—'} />
+          <ModalRow label="City qual"    value={<QualBadge ok={install.is_city_qualified} />} />
+          <ModalRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
+          {linkedinUrl ? (
+            <div className="flex items-center justify-between pt-1">
+              <span
+                className="text-[11px] font-semibold tracking-[0.1em] uppercase"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                LinkedIn
+              </span>
+              <a
+                href={linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[12px] text-blue-500 hover:text-blue-700 underline underline-offset-2"
+              >
+                View profile ↗
+              </a>
+            </div>
+          ) : (
+            <ModalRow label="LinkedIn" value="—" />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModalRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span
+        className="text-[11px] font-semibold tracking-[0.1em] uppercase"
+        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}
+      >
+        {label}
+      </span>
+      <span
+        className="text-[12px]"
+        style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
 const COLS: { key: SortField; label: string }[] = [
   { key: 'name',         label: 'Name'      },
   { key: 'company',      label: 'Company'   },
   { key: 'city',         label: 'City'      },
   { key: 'is_qualified', label: 'Qualified' },
+  { key: 'onboarded_at', label: 'Date'      },
 ]
 
 export default function InstallerTable({ installs }: { installs: PilotInstall[] }) {
-  const [open,    setOpen]    = useState(false)
-  const [search,  setSearch]  = useState('')
+  const [open,      setOpen]      = useState(false)
+  const [search,    setSearch]    = useState('')
   const [sortField, setSortField] = useState<SortField>('is_qualified')
   const [sortDir,   setSortDir]   = useState<SortDir>('desc')
+  const [selected,  setSelected]  = useState<PilotInstall | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -135,7 +244,7 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
               <div className="mb-3">
                 <input
                   type="text"
-                  placeholder="Search name, company, city, phone..."
+                  placeholder="Search name, company, city..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="w-full text-[12px] px-3 py-2 rounded-lg outline-none"
@@ -174,12 +283,6 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                         </th>
                       ))}
                       <th
-                        className="text-left pb-2 pr-5 whitespace-nowrap"
-                        style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}
-                      >
-                        Phone
-                      </th>
-                      <th
                         className="text-left pb-2 whitespace-nowrap"
                         style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}
                       >
@@ -197,7 +300,8 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                     ) : filtered.map(u => (
                       <tr
                         key={u.id}
-                        className="hover:bg-white transition-colors"
+                        onClick={() => setSelected(u)}
+                        className="hover:bg-white transition-colors cursor-pointer"
                         style={{ borderBottom: '1px solid var(--border)' }}
                       >
                         <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
@@ -217,9 +321,9 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                           <QualBadge ok={u.is_qualified} />
                         </td>
                         <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                          {u.phone ? `•••• ${u.phone.slice(-4)}` : '—'}
+                          {formatDate(u.onboarded_at)}
                         </td>
-                        <td className="py-2.5">
+                        <td className="py-2.5" onClick={e => e.stopPropagation()}>
                           {u.linkedin ? (
                             <a
                               href={u.linkedin.startsWith('http') ? u.linkedin : `https://${u.linkedin}`}
@@ -245,6 +349,11 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
             </>
           )}
         </div>
+      )}
+
+      {/* Detail modal */}
+      {selected && (
+        <DetailModal install={selected} onClose={() => setSelected(null)} />
       )}
     </div>
   )

@@ -34,6 +34,7 @@ export type MetabaseUser = {
   name: string | null
   company: string | null
   linkedin: string | null
+  onboarded_at: string | null
 }
 
 // Fetch onboarded users from question 498, bounded to pilot start date onwards.
@@ -77,11 +78,15 @@ export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
       const linkedin =
         row['LinkedIn'] ?? row['linkedin'] ?? row['LinkedIn URL'] ?? null
 
+      const onboardedAt =
+        row['Onboarded At'] ?? row['onboarded_at'] ?? row['Created At'] ?? row['created_at'] ?? null
+
       return {
         phone: String(phone).replace(/\D/g, '').slice(-10),
         name: name ? String(name) : null,
         company: company ? String(company).trim() : null,
         linkedin: linkedin ? String(linkedin).trim() : null,
+        onboarded_at: onboardedAt ? String(onboardedAt) : null,
       }
     }).filter(u => u.phone.length >= 8)
 

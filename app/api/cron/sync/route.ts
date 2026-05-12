@@ -64,12 +64,12 @@ export async function GET(req: NextRequest) {
   // phoneToCompany used for Gemini qualification (unchanged)
   const phoneToCompany = new Map<string, string>()
   // phoneToMeta carries full user details for pilot_installs table
-  const phoneToMeta = new Map<string, { name: string | null; company: string | null; linkedin: string | null }>()
+  const phoneToMeta = new Map<string, { name: string | null; company: string | null; linkedin: string | null; onboarded_at: string | null }>()
 
   for (const u of metabaseUsers as any[]) {
     if (u.phone && allAttributedPhones.has(u.phone)) {
       if (u.company) phoneToCompany.set(u.phone, u.company.toLowerCase().trim())
-      phoneToMeta.set(u.phone, { name: u.name ?? null, company: u.company ?? null, linkedin: u.linkedin ?? null })
+      phoneToMeta.set(u.phone, { name: u.name ?? null, company: u.company ?? null, linkedin: u.linkedin ?? null, onboarded_at: u.onboarded_at ?? null })
     }
   }
 
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
       // Also collect onboarded users for pilot_installs table
       const onboardedUsers: Array<{
         phone: string; city: string | null
-        name: string | null; company: string | null; linkedin: string | null
+        name: string | null; company: string | null; linkedin: string | null; onboarded_at: string | null
         is_city_qualified: boolean; is_company_qualified: boolean; is_qualified: boolean
       }> = []
 
@@ -111,11 +111,12 @@ export async function GET(req: NextRequest) {
         if (isQualified) qualifiedInstalls++
 
         onboardedUsers.push({
-          phone:    mpUser.phone,
-          city:     mpUser.city ?? null,
-          name:     meta.name,
-          company:  meta.company,
-          linkedin: meta.linkedin,
+          phone:        mpUser.phone,
+          city:         mpUser.city ?? null,
+          name:         meta.name,
+          company:      meta.company,
+          linkedin:     meta.linkedin,
+          onboarded_at: meta.onboarded_at,
           is_city_qualified:    cityOk,
           is_company_qualified: companyOk,
           is_qualified:         isQualified,
