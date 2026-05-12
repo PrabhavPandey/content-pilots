@@ -1,6 +1,6 @@
 'use client'
 
-// Admin-only — collapsible installer table with search + sort + detail modal
+// Admin-only — collapsible installer table with search + sort + detail popover
 // Never rendered for pilot (agency) accounts
 
 import { useState, useMemo, useEffect, useRef } from 'react'
@@ -43,69 +43,43 @@ function formatDate(raw: string | null | undefined): string {
   }
 }
 
-type SelectedInstall = { install: PilotInstall; anchorY: number }
-
-function DetailPopover({
-  install,
-  anchorY,
-  onClose,
-}: {
-  install: PilotInstall
-  anchorY: number
-  onClose: () => void
-}) {
-  const popoverRef = useRef<HTMLDivElement>(null)
-  const POPOVER_HEIGHT = 320
-  const MARGIN = 12
-
-  // Clamp so it stays within viewport
-  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800
-  const top = Math.min(
-    Math.max(anchorY - 16, MARGIN),
-    viewportH - POPOVER_HEIGHT - MARGIN
-  )
+function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
 
   const linkedinUrl = install.linkedin
     ? (install.linkedin.startsWith('http') ? install.linkedin : `https://${install.linkedin}`)
     : null
 
-  // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose()
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
-    // Small delay so the row click that opened it doesn't immediately close it
     const id = setTimeout(() => document.addEventListener('mousedown', handler), 50)
-    return () => {
-      clearTimeout(id)
-      document.removeEventListener('mousedown', handler)
-    }
+    return () => { clearTimeout(id); document.removeEventListener('mousedown', handler) }
   }, [onClose])
 
   return (
     <div
-      ref={popoverRef}
-      className="fixed right-6 z-50 w-72 rounded-2xl p-5"
+      ref={ref}
+      className="fixed z-50 w-72 rounded-2xl p-5"
       style={{
-        top,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         background: '#FFFFFF',
         border: '1px solid var(--border)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.14)',
         fontFamily: 'var(--font-inconsolata)',
       }}
     >
-      {/* Close */}
       <button
         onClick={onClose}
-        className="absolute top-3.5 right-3.5 w-6 h-6 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors text-[14px] leading-none"
+        className="absolute top-3.5 right-3.5 w-6 h-6 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors text-[15px] leading-none"
         style={{ color: 'var(--text-muted)' }}
       >
         ×
       </button>
 
-      {/* Name + qualified */}
       <div className="mb-4 pr-6">
         <p
           className="text-[15px] font-semibold leading-tight"
@@ -118,7 +92,6 @@ function DetailPopover({
         </div>
       </div>
 
-      {/* Fields */}
       <div className="space-y-2.5">
         <PopRow label="Company"      value={install.company ?? '—'} />
         <PopRow label="City"         value={install.city ?? '—'} />
@@ -128,18 +101,11 @@ function DetailPopover({
         <PopRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
         {linkedinUrl ? (
           <div className="flex items-center justify-between">
-            <span
-              className="text-[10px] font-semibold tracking-[0.1em] uppercase"
-              style={{ color: 'var(--text-muted)' }}
-            >
+            <span className="text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)' }}>
               LinkedIn
             </span>
-            <a
-              href={linkedinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-blue-500 hover:text-blue-700 underline underline-offset-2"
-            >
+            <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+              className="text-[11px] text-blue-500 hover:text-blue-700 underline underline-offset-2">
               View profile ↗
             </a>
           </div>
@@ -154,16 +120,10 @@ function DetailPopover({
 function PopRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span
-        className="text-[10px] font-semibold tracking-[0.1em] uppercase"
-        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}
-      >
+      <span className="text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
         {label}
       </span>
-      <span
-        className="text-[11px]"
-        style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}
-      >
+      <span className="text-[11px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
         {value}
       </span>
     </div>
@@ -183,15 +143,13 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
   const [search,    setSearch]    = useState('')
   const [sortField, setSortField] = useState<SortField>('is_qualified')
   const [sortDir,   setSortDir]   = useState<SortDir>('desc')
-  const [selected,  setSelected]  = useState<SelectedInstall | null>(null)
+  const [selected,  setSelected]  = useState<PilotInstall | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
     const rows = q
       ? installs.filter(u =>
-          [u.name, u.company, u.city, u.phone].some(v =>
-            v?.toLowerCase().includes(q)
-          )
+          [u.name, u.company, u.city, u.phone].some(v => v?.toLowerCase().includes(q))
         )
       : installs
 
@@ -207,71 +165,46 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
   }, [installs, search, sortField, sortDir])
 
   function toggleSort(field: SortField) {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir('asc')
-    }
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir('asc') }
   }
 
   const qualifiedCount = installs.filter(u => u.is_qualified).length
 
   return (
     <div className="mt-2">
-      {/* Toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors hover:bg-stone-100"
-        style={{
-          background: open ? '#F7F5F2' : '#FAFAF9',
-          border: '1px solid var(--border)',
-          fontFamily: 'var(--font-inconsolata)',
-        }}
+        style={{ background: open ? '#F7F5F2' : '#FAFAF9', border: '1px solid var(--border)', fontFamily: 'var(--font-inconsolata)' }}
       >
         <div className="flex items-center gap-3">
-          <span
-            className="text-[11px] font-semibold tracking-[0.15em] uppercase"
-            style={{ color: 'var(--text-secondary)' }}
-          >
+          <span className="text-[11px] font-semibold tracking-[0.15em] uppercase" style={{ color: 'var(--text-secondary)' }}>
             Onboarded Users
           </span>
-          <span
-            className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: '#EFECE8', color: 'var(--text-secondary)' }}
-          >
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: '#EFECE8', color: 'var(--text-secondary)' }}>
             {installs.length}
           </span>
           {qualifiedCount > 0 && (
-            <span
-              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: '#ECFDF5', color: '#059669' }}
-            >
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: '#ECFDF5', color: '#059669' }}>
               {qualifiedCount} qualified
             </span>
           )}
         </div>
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-          {open ? '▲' : '▼'}
-        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
       </button>
 
-      {/* Expanded panel */}
       {open && (
         <div
           className="rounded-b-xl px-4 pb-4 pt-3"
           style={{ border: '1px solid var(--border)', borderTop: 'none', background: '#FAFAF9' }}
         >
           {installs.length === 0 ? (
-            <p
-              className="text-[12px] italic py-4 text-center"
-              style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}
-            >
+            <p className="text-[12px] italic py-4 text-center" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
               No onboarded users yet for this campaign.
             </p>
           ) : (
             <>
-              {/* Search */}
               <div className="mb-3">
                 <input
                   type="text"
@@ -279,21 +212,12 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="w-full text-[12px] px-3 py-2 rounded-lg outline-none"
-                  style={{
-                    fontFamily: 'var(--font-inconsolata)',
-                    background: '#FFFFFF',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text-primary)',
-                  }}
+                  style={{ fontFamily: 'var(--font-inconsolata)', background: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              {/* Table */}
               <div className="overflow-x-auto">
-                <table
-                  className="w-full text-[12px]"
-                  style={{ fontFamily: 'var(--font-inconsolata)', borderCollapse: 'collapse' }}
-                >
+                <table className="w-full text-[12px]" style={{ fontFamily: 'var(--font-inconsolata)', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
                       {COLS.map(col => (
@@ -301,13 +225,7 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                           key={col.key}
                           onClick={() => toggleSort(col.key)}
                           className="text-left pb-2 pr-5 cursor-pointer select-none hover:opacity-80 whitespace-nowrap"
-                          style={{
-                            color: 'var(--text-muted)',
-                            fontWeight: 600,
-                            fontSize: 10,
-                            letterSpacing: '0.12em',
-                            textTransform: 'uppercase',
-                          }}
+                          style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}
                         >
                           {col.label}
                           <SortIcon field={col.key} active={sortField === col.key} dir={sortDir} />
@@ -325,29 +243,17 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                     ) : filtered.map(u => (
                       <tr
                         key={u.id}
-                        onClick={e => setSelected({ install: u, anchorY: e.clientY })}
+                        onClick={() => setSelected(u)}
                         className="hover:bg-white transition-colors cursor-pointer"
                         style={{ borderBottom: '1px solid var(--border)' }}
                       >
-                        <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
-                          {u.name ?? '—'}
-                        </td>
-                        <td
-                          className="py-2.5 pr-5"
-                          style={{ color: 'var(--text-secondary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          title={u.company ?? undefined}
-                        >
+                        <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{u.name ?? '—'}</td>
+                        <td className="py-2.5 pr-5" style={{ color: 'var(--text-secondary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={u.company ?? undefined}>
                           {u.company ?? '—'}
                         </td>
-                        <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                          {u.city ?? '—'}
-                        </td>
-                        <td className="py-2.5 pr-5">
-                          <QualBadge ok={u.is_qualified} />
-                        </td>
-                        <td className="py-2.5 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
-                          {formatDate(u.onboarded_at)}
-                        </td>
+                        <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{u.city ?? '—'}</td>
+                        <td className="py-2.5 pr-5"><QualBadge ok={u.is_qualified} /></td>
+                        <td className="py-2.5 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{formatDate(u.onboarded_at)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -364,14 +270,7 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
         </div>
       )}
 
-      {/* Detail popover - no overlay, anchored to click position */}
-      {selected && (
-        <DetailPopover
-          install={selected.install}
-          anchorY={selected.anchorY}
-          onClose={() => setSelected(null)}
-        />
-      )}
+      {selected && <DetailPopover install={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }
