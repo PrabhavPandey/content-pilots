@@ -3,7 +3,7 @@
 // Admin-only — collapsible installer table with search + sort + detail modal
 // Never rendered for pilot (agency) accounts
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { PilotInstall } from '@/lib/db'
 
 type SortField = 'name' | 'company' | 'city' | 'is_qualified' | 'onboarded_at'
@@ -43,94 +43,125 @@ function formatDate(raw: string | null | undefined): string {
   }
 }
 
-function DetailModal({ install, onClose }: { install: PilotInstall; onClose: () => void }) {
+type SelectedInstall = { install: PilotInstall; anchorY: number }
+
+function DetailPopover({
+  install,
+  anchorY,
+  onClose,
+}: {
+  install: PilotInstall
+  anchorY: number
+  onClose: () => void
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const POPOVER_HEIGHT = 320
+  const MARGIN = 12
+
+  // Clamp so it stays within viewport
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800
+  const top = Math.min(
+    Math.max(anchorY - 16, MARGIN),
+    viewportH - POPOVER_HEIGHT - MARGIN
+  )
+
   const linkedinUrl = install.linkedin
     ? (install.linkedin.startsWith('http') ? install.linkedin : `https://${install.linkedin}`)
     : null
 
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    // Small delay so the row click that opened it doesn't immediately close it
+    const id = setTimeout(() => document.addEventListener('mousedown', handler), 50)
+    return () => {
+      clearTimeout(id)
+      document.removeEventListener('mousedown', handler)
+    }
+  }, [onClose])
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}
-      onClick={onClose}
+      ref={popoverRef}
+      className="fixed right-6 z-50 w-72 rounded-2xl p-5"
+      style={{
+        top,
+        background: '#FFFFFF',
+        border: '1px solid var(--border)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        fontFamily: 'var(--font-inconsolata)',
+      }}
     >
-      <div
-        className="relative rounded-2xl p-6 w-full max-w-sm mx-4"
-        style={{
-          background: '#FAFAF9',
-          border: '1px solid var(--border)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-          fontFamily: 'var(--font-inconsolata)',
-        }}
-        onClick={e => e.stopPropagation()}
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute top-3.5 right-3.5 w-6 h-6 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors text-[14px] leading-none"
+        style={{ color: 'var(--text-muted)' }}
       >
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-[18px] leading-none hover:opacity-60 transition-opacity"
-          style={{ color: 'var(--text-muted)' }}
+        ×
+      </button>
+
+      {/* Name + qualified */}
+      <div className="mb-4 pr-6">
+        <p
+          className="text-[15px] font-semibold leading-tight"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-poppins)' }}
         >
-          ×
-        </button>
+          {install.name ?? '—'}
+        </p>
+        <div className="mt-1.5">
+          <QualBadge ok={install.is_qualified} />
+        </div>
+      </div>
 
-        {/* Name + qualified */}
-        <div className="mb-5">
-          <p
-            className="text-[16px] font-semibold leading-tight"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-poppins)' }}
-          >
-            {install.name ?? '—'}
-          </p>
-          <div className="mt-1.5">
-            <QualBadge ok={install.is_qualified} />
+      {/* Fields */}
+      <div className="space-y-2.5">
+        <PopRow label="Company"      value={install.company ?? '—'} />
+        <PopRow label="City"         value={install.city ?? '—'} />
+        <PopRow label="Onboarded"    value={formatDate(install.onboarded_at)} />
+        <PopRow label="Phone"        value={install.phone ?? '—'} />
+        <PopRow label="City qual"    value={<QualBadge ok={install.is_city_qualified} />} />
+        <PopRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
+        {linkedinUrl ? (
+          <div className="flex items-center justify-between">
+            <span
+              className="text-[10px] font-semibold tracking-[0.1em] uppercase"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              LinkedIn
+            </span>
+            <a
+              href={linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-blue-500 hover:text-blue-700 underline underline-offset-2"
+            >
+              View profile ↗
+            </a>
           </div>
-        </div>
-
-        {/* Fields */}
-        <div className="space-y-3">
-          <ModalRow label="Company"      value={install.company ?? '—'} />
-          <ModalRow label="City"         value={install.city ?? '—'} />
-          <ModalRow label="Onboarded"    value={formatDate(install.onboarded_at)} />
-          <ModalRow label="Phone"        value={install.phone ?? '—'} />
-          <ModalRow label="City qual"    value={<QualBadge ok={install.is_city_qualified} />} />
-          <ModalRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
-          {linkedinUrl ? (
-            <div className="flex items-center justify-between pt-1">
-              <span
-                className="text-[11px] font-semibold tracking-[0.1em] uppercase"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                LinkedIn
-              </span>
-              <a
-                href={linkedinUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[12px] text-blue-500 hover:text-blue-700 underline underline-offset-2"
-              >
-                View profile ↗
-              </a>
-            </div>
-          ) : (
-            <ModalRow label="LinkedIn" value="—" />
-          )}
-        </div>
+        ) : (
+          <PopRow label="LinkedIn" value="—" />
+        )}
       </div>
     </div>
   )
 }
 
-function ModalRow({ label, value }: { label: string; value: React.ReactNode }) {
+function PopRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
       <span
-        className="text-[11px] font-semibold tracking-[0.1em] uppercase"
+        className="text-[10px] font-semibold tracking-[0.1em] uppercase"
         style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}
       >
         {label}
       </span>
       <span
-        className="text-[12px]"
+        className="text-[11px]"
         style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}
       >
         {value}
@@ -152,7 +183,7 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
   const [search,    setSearch]    = useState('')
   const [sortField, setSortField] = useState<SortField>('is_qualified')
   const [sortDir,   setSortDir]   = useState<SortDir>('desc')
-  const [selected,  setSelected]  = useState<PilotInstall | null>(null)
+  const [selected,  setSelected]  = useState<SelectedInstall | null>(null)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -282,25 +313,19 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                           <SortIcon field={col.key} active={sortField === col.key} dir={sortDir} />
                         </th>
                       ))}
-                      <th
-                        className="text-left pb-2 whitespace-nowrap"
-                        style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}
-                      >
-                        LinkedIn
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-4 text-center text-[12px] italic" style={{ color: 'var(--text-muted)' }}>
+                        <td colSpan={5} className="py-4 text-center text-[12px] italic" style={{ color: 'var(--text-muted)' }}>
                           No results for "{search}"
                         </td>
                       </tr>
                     ) : filtered.map(u => (
                       <tr
                         key={u.id}
-                        onClick={() => setSelected(u)}
+                        onClick={e => setSelected({ install: u, anchorY: e.clientY })}
                         className="hover:bg-white transition-colors cursor-pointer"
                         style={{ borderBottom: '1px solid var(--border)' }}
                       >
@@ -320,20 +345,8 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
                         <td className="py-2.5 pr-5">
                           <QualBadge ok={u.is_qualified} />
                         </td>
-                        <td className="py-2.5 pr-5 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
+                        <td className="py-2.5 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
                           {formatDate(u.onboarded_at)}
-                        </td>
-                        <td className="py-2.5" onClick={e => e.stopPropagation()}>
-                          {u.linkedin ? (
-                            <a
-                              href={u.linkedin.startsWith('http') ? u.linkedin : `https://${u.linkedin}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-500 hover:text-blue-700 underline underline-offset-2"
-                            >
-                              View ↗
-                            </a>
-                          ) : '—'}
                         </td>
                       </tr>
                     ))}
@@ -351,9 +364,13 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
         </div>
       )}
 
-      {/* Detail modal */}
+      {/* Detail popover - no overlay, anchored to click position */}
       {selected && (
-        <DetailModal install={selected} onClose={() => setSelected(null)} />
+        <DetailPopover
+          install={selected.install}
+          anchorY={selected.anchorY}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   )
