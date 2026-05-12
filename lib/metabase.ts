@@ -79,7 +79,7 @@ export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
         row['LinkedIn'] ?? row['linkedin'] ?? row['LinkedIn URL'] ?? null
 
       const onboardedAt =
-        row['Onboarded At'] ?? row['onboarded_at'] ?? row['Created At'] ?? row['created_at'] ?? null
+        row['Onboarded At (IST)'] ?? row['Onboarded At'] ?? row['onboarded_at'] ?? row['Created At'] ?? row['created_at'] ?? null
 
       return {
         phone: String(phone).replace(/\D/g, '').slice(-10),
