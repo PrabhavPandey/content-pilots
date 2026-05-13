@@ -4,6 +4,7 @@
 // Never rendered for pilot (agency) accounts
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { PilotInstall } from '@/lib/db'
 
 type SortField = 'name' | 'company' | 'city' | 'is_qualified' | 'onboarded_at'
@@ -58,14 +59,16 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
     return () => { clearTimeout(id); document.removeEventListener('mousedown', handler) }
   }, [onClose])
 
-  return (
+  const modal = (
     <div
       ref={ref}
-      className="fixed z-50 w-72 rounded-2xl p-5"
+      className="w-72 rounded-2xl p-5"
       style={{
+        position: 'fixed',
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
+        zIndex: 9999,
         background: '#FFFFFF',
         border: '1px solid var(--border)',
         boxShadow: '0 8px 40px rgba(0,0,0,0.14)',
@@ -115,6 +118,8 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }
 
 function PopRow({ label, value }: { label: string; value: React.ReactNode }) {
