@@ -163,13 +163,13 @@ export async function batchClassifyUsers(
 
   if (uncached.length > 0) {
     console.log(`Gemini [${pilotType}]: ${cachedMap.size + sessionCache.size} cached, ${uncached.length} to classify`)
-    for (let i = 0; i < uncached.length; i += 5) {
-      const batch = uncached.slice(i, i + 5)
+    for (let i = 0; i < uncached.length; i += 15) {
+      const batch = uncached.slice(i, i + 15)
       await Promise.all(batch.map(key => {
         const [company, jobRole] = key.split('|||')
         return callGemini(company, jobRole || null, pilotType, db)
       }))
-      if (i + 5 < uncached.length) await new Promise(r => setTimeout(r, 200))
+      if (i + 15 < uncached.length) await new Promise(r => setTimeout(r, 50))
     }
   } else {
     console.log(`Gemini [${pilotType}]: all ${unique.length} from cache — 0 API calls`)

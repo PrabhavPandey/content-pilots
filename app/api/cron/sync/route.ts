@@ -105,90 +105,90 @@ export async function GET(req: NextRequest) {
     influencerUsers.length > 0 ? batchClassifyUsers(influencerUsers, 'influencer', db) : Promise.resolve(new Map<string, CacheEntry>()),
   ])
 
-  // ── Per-pilot qualification + write ─────────────────────────────────────
-  const results = []
-  const errors  = []
+  // ── Per-pilot qualification + parallel write ─────────────────────────────
+  const syncedAt = new Date().toISOString()
 
-  for (const pilot of pilots) {
-    try {
-      const campaignKey = pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? ''
-      const pilotType   = pilot.type as 'ugc' | 'influencer'
-      const classMap    = pilotType === 'ugc' ? ugcClassMap : influencerClassMap
-      const lrStats     = (lrMap as Map<string, any>).get(campaignKey) ?? null
-      const mpData      = (mpMap as Map<string, any>).get(campaignKey) ?? { first_app_opens: 0, users: [] }
+  const settled = await Promise.allSettled(pilots.map(async pilot => {
+    const campaignKey = pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? ''
+    const pilotType   = pilot.type as 'ugc' | 'influencer'
+    const classMap    = pilotType === 'ugc' ? ugcClassMap : influencerClassMap
+    const lrStats     = (lrMap as Map<string, any>).get(campaignKey) ?? null
+    const mpData      = (mpMap as Map<string, any>).get(campaignKey) ?? { first_app_opens: 0, users: [] }
 
-      let qualifiedInstalls = 0
-      const onboardedUsers: Array<{
-        phone: string; city: string | null
-        name: string | null; company: string | null; job_role: string | null
-        linkedin: string | null; onboarded_at: string | null
-        is_city_qualified: boolean; is_company_qualified: boolean; is_qualified: boolean
-        gemini_reason: string | null
-      }> = []
+    let qualifiedInstalls = 0
+    const onboardedUsers: Array<{
+      phone: string; city: string | null
+      name: string | null; company: string | null; job_role: string | null
+      linkedin: string | null; onboarded_at: string | null
+      is_city_qualified: boolean; is_company_qualified: boolean; is_qualified: boolean
+      gemini_reason: string | null
+    }> = []
 
-      for (const mpUser of mpData.users) {
-        const meta = phoneToMeta.get(mpUser.phone)
-        if (!meta) continue // not found in Metabase — hasn't onboarded
+    for (const mpUser of mpData.users) {
+      const meta = phoneToMeta.get(mpUser.phone)
+      if (!meta) continue
 
-        const cityOk    = pilotType === 'influencer' ? isCityQualified(mpUser.city) : true
-        const companyKey = meta.company?.toLowerCase().trim() ?? ''
-        const cacheKey   = buildCacheKey(companyKey, meta.job_role, pilotType)
-        const entry      = companyKey ? classMap.get(cacheKey) : undefined
-        const companyOk  = entry?.qualified ?? false
-        const geminiReason = entry?.reason ?? null
-        const isQualified  = cityOk && companyOk
+      const cityOk       = pilotType === 'influencer' ? isCityQualified(mpUser.city) : true
+      const companyKey   = meta.company?.toLowerCase().trim() ?? ''
+      const cacheKey     = buildCacheKey(companyKey, meta.job_role, pilotType)
+      const entry        = companyKey ? classMap.get(cacheKey) : undefined
+      const companyOk    = entry?.qualified ?? false
+      const geminiReason = entry?.reason ?? null
+      const isQualified  = cityOk && companyOk
 
-        if (isQualified) qualifiedInstalls++
+      if (isQualified) qualifiedInstalls++
 
-        onboardedUsers.push({
-          phone:                mpUser.phone,
-          city:                 mpUser.city        ?? null,
-          name:                 meta.name,
-          company:              meta.company,
-          job_role:             meta.job_role,
-          linkedin:             meta.linkedin,
-          onboarded_at:         meta.onboarded_at,
-          is_city_qualified:    cityOk,
-          is_company_qualified: companyOk,
-          is_qualified:         isQualified,
-          gemini_reason:        geminiReason,
-        })
-      }
-
-      console.log(`${pilot.name} [${pilotType}]: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} opens=${mpData.first_app_opens} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}`)
-
-      const syncedAt = new Date().toISOString()
-
-      const { error: insertError } = await db.from('pilot_metrics').insert({
-        pilot_id:           pilot.id,
-        fetched_at:         syncedAt,
-        lr_clicks:          lrStats?.clicks   ?? 0,
-        lr_installs:        lrStats?.installs  ?? 0,
-        lr_reinstalls:      0,
-        lr_signups:         lrStats?.signups   ?? 0,
-        lr_conversion_rate: 0,
-        lr_retention_d1:    0,
-        lr_retention_d7:    0,
-        mp_first_app_opens: mpData.first_app_opens,
-        qualified_installs: qualifiedInstalls,
+      onboardedUsers.push({
+        phone:                mpUser.phone,
+        city:                 mpUser.city        ?? null,
+        name:                 meta.name,
+        company:              meta.company,
+        job_role:             meta.job_role,
+        linkedin:             meta.linkedin,
+        onboarded_at:         meta.onboarded_at,
+        is_city_qualified:    cityOk,
+        is_company_qualified: companyOk,
+        is_qualified:         isQualified,
+        gemini_reason:        geminiReason,
       })
-
-      if (insertError) throw insertError
-
-      // Refresh pilot_installs: delete existing rows, insert fresh ones
-      await db.from('pilot_installs').delete().eq('pilot_id', pilot.id)
-      if (onboardedUsers.length > 0) {
-        await db.from('pilot_installs').insert(
-          onboardedUsers.map(u => ({ ...u, pilot_id: pilot.id, synced_at: syncedAt }))
-        )
-      }
-
-      results.push({ pilot: pilot.name, status: 'ok', qualifiedInstalls, onboarded: onboardedUsers.length })
-    } catch (err: any) {
-      console.error(`Failed to sync ${pilot.name}:`, err)
-      errors.push({ pilot: pilot.name, error: err?.message ?? String(err) })
     }
-  }
 
-  return NextResponse.json({ synced_at: new Date().toISOString(), results, errors })
+    console.log(`${pilot.name} [${pilotType}]: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}`)
+
+    const { error: metricsError } = await db.from('pilot_metrics').insert({
+      pilot_id:           pilot.id,
+      fetched_at:         syncedAt,
+      lr_clicks:          lrStats?.clicks   ?? 0,
+      lr_installs:        lrStats?.installs  ?? 0,
+      lr_reinstalls:      0,
+      lr_signups:         lrStats?.signups   ?? 0,
+      lr_conversion_rate: 0,
+      lr_retention_d1:    0,
+      lr_retention_d7:    0,
+      mp_first_app_opens: mpData.first_app_opens,
+      qualified_installs: qualifiedInstalls,
+    })
+    if (metricsError) throw metricsError
+
+    // Refresh installs: delete + insert in parallel
+    await db.from('pilot_installs').delete().eq('pilot_id', pilot.id)
+    if (onboardedUsers.length > 0) {
+      await db.from('pilot_installs').insert(
+        onboardedUsers.map(u => ({ ...u, pilot_id: pilot.id, synced_at: syncedAt }))
+      )
+    }
+
+    return { pilot: pilot.name, status: 'ok', qualifiedInstalls, onboarded: onboardedUsers.length }
+  }))
+
+  const results = settled.flatMap((r, i) =>
+    r.status === 'fulfilled' ? [(r as PromiseFulfilledResult<any>).value] : []
+  )
+  const errors = settled.flatMap((r, i) =>
+    r.status === 'rejected'
+      ? [{ pilot: pilots[i]?.name, error: (r as PromiseRejectedResult).reason?.message ?? String((r as PromiseRejectedResult).reason) }]
+      : []
+  )
+
+  return NextResponse.json({ synced_at: syncedAt, results, errors })
 }
