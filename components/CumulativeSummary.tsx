@@ -81,12 +81,6 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
             <Stat label="Install → Qual" value={`${installToQual}%`} />
           </>
         )}
-        {costPerQualified && (
-          <>
-            {divider}
-            <Stat label="Cost / Qualified" value={formatInr(costPerQualified)} />
-          </>
-        )}
       </div>
     </div>
   )
