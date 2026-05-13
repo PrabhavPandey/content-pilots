@@ -1,27 +1,10 @@
 // Metabase API client - READ ONLY
-// Question 498: "Tal Onboarded User Details + Company"
-// Columns: Phone Number, Name, LinkedIn, Current Company, Onboarded At
+// Uses native SQL against database 12 (tal main db) to look up users by phone.
+// Queries tal.users + tal.user_linkedin_data directly — no saved card dependency.
 
 const BASE_URL = process.env.METABASE_URL ?? 'https://metabase.pub.gcp.gvine.app'
-const API_KEY = process.env.METABASE_API_KEY ?? ''
-
-async function metabaseFetch(path: string, options?: RequestInit) {
-  const res = await fetch(`${BASE_URL}/api${path}`, {
-    ...options,
-    headers: {
-      'X-API-KEY': API_KEY,
-      'Content-Type': 'application/json',
-      ...(options?.headers ?? {}),
-    },
-    next: { revalidate: 0 },
-  })
-
-  if (!res.ok) {
-    throw new Error(`Metabase API error ${res.status}: ${await res.text()}`)
-  }
-
-  return res.json()
-}
+const API_KEY  = process.env.METABASE_API_KEY ?? ''
+const DB_ID    = 12
 
 function runRows(data: any): Record<string, any>[] {
   const rows: any[][] = data?.data?.rows ?? []
@@ -37,72 +20,68 @@ export type MetabaseUser = {
   onboarded_at: string | null
 }
 
-// Fetch onboarded users from question 498, bounded to pilot start date onwards.
-// Pilot launched 2026-05-06 - no point fetching users who onboarded before that.
+// Look up TAL user profiles for a specific set of phones (10-digit normalized).
+// The DB stores phones with country code (e.g. 919876543210), so we match on
+// the last 10 digits using RIGHT(phone, 10).
+// Returns only users who signed up on or after PILOT_START_DATE.
 const PILOT_START_DATE = '2026-05-06'
 
-export async function getOnboardedUsers(): Promise<MetabaseUser[]> {
-  const today = new Date()
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
+export async function getOnboardedUsers(normalizedPhones: string[]): Promise<MetabaseUser[]> {
+  if (normalizedPhones.length === 0) return []
+
+  // Deduplicate
+  const phones = [...new Set(normalizedPhones)]
+
+  // Build SQL — match on last 10 digits so we handle any country code prefix
+  const phoneList = phones.map(p => `'${p}'`).join(', ')
+
+  const query = `
+    SELECT
+      u.phone,
+      u.name         AS user_name,
+      ld.current_company_name,
+      ld.linkedin_url,
+      ld.location,
+      u.created_at
+    FROM tal.users u
+    LEFT JOIN tal.user_linkedin_data ld ON ld.phone = u.phone
+    WHERE RIGHT(u.phone::text, 10) IN (${phoneList})
+      AND u.created_at >= '${PILOT_START_DATE}'
+    LIMIT 2000
+  `
 
   try {
-    const data = await metabaseFetch('/card/498/query', {
+    const res = await fetch(`${BASE_URL}/api/dataset`, {
       method: 'POST',
+      headers: {
+        'X-API-KEY': API_KEY,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        ignore_cache: true,
-        parameters: [
-          {
-            type: 'date/single',
-            value: PILOT_START_DATE,
-            target: ['variable', ['template-tag', 'start_date']],
-          },
-          {
-            type: 'date/single',
-            value: fmt(today),
-            target: ['variable', ['template-tag', 'end_date']],
-          },
-        ],
+        database: DB_ID,
+        type: 'native',
+        native: { query },
       }),
+      next: { revalidate: 0 },
     })
 
+    if (!res.ok) {
+      throw new Error(`Metabase dataset error ${res.status}: ${await res.text()}`)
+    }
+
+    const data = await res.json()
     const rows = runRows(data)
 
-    // Normalize column names - Metabase may use different casings
-    return rows.map(row => {
-      const phone =
-        row['Phone Number'] ?? row['phone_number'] ?? row['phone'] ?? row['Phone'] ?? ''
-      const name = row['Name'] ?? row['name'] ?? null
-      const company =
-        row['Current Company'] ?? row['current_company'] ?? row['company'] ?? null
-
-      const linkedin =
-        row['LinkedIn'] ?? row['linkedin'] ?? row['LinkedIn URL'] ?? null
-
-      const onboardedAt =
-        row['Onboarded At (IST)'] ?? row['Onboarded At'] ?? row['onboarded_at'] ?? row['Created At'] ?? row['created_at'] ?? null
-
-      return {
-        phone: String(phone).replace(/\D/g, '').slice(-10),
-        name: name ? String(name) : null,
-        company: company ? String(company).trim() : null,
-        linkedin: linkedin ? String(linkedin).trim() : null,
-        onboarded_at: onboardedAt ? String(onboardedAt) : null,
-      }
-    }).filter(u => u.phone.length >= 8)
+    return rows.map(row => ({
+      phone: String(row['phone'] ?? '').replace(/\D/g, '').slice(-10),
+      name:  row['user_name'] ? String(row['user_name']) : null,
+      company: row['current_company_name'] ? String(row['current_company_name']).trim() : null,
+      linkedin: row['linkedin_url'] ? String(row['linkedin_url']).trim() : null,
+      onboarded_at: row['created_at'] ? String(row['created_at']) : null,
+    })).filter(u => u.phone.length >= 8)
 
   } catch (err) {
     console.error('Metabase getOnboardedUsers failed:', err)
-    return []
-  }
-}
-
-// List all Metabase questions (helper endpoint, read-only)
-export async function listMetabaseQuestions(): Promise<{ id: number; name: string }[]> {
-  try {
-    const data = await metabaseFetch('/card?f=all&page=0&page_size=100')
-    return (data ?? []).map((q: any) => ({ id: q.id, name: q.name }))
-  } catch (err) {
-    console.error('Failed to list Metabase questions:', err)
     return []
   }
 }

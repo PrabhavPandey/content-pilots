@@ -53,25 +53,24 @@ export async function GET(req: NextRequest) {
 
   const campaignNames = pilots.map(p => p.linkrunner_campaign_name?.toLowerCase().trim() ?? '')
 
-  const [mpMap, metabaseUsers] = await Promise.allSettled([
-    getAllCampaignInstalls(campaignNames),
-    getOnboardedUsers(),
-  ]).then(([mp, mb]) => [
-    mp.status === 'fulfilled' ? mp.value : new Map(),
-    mb.status === 'fulfilled' ? mb.value : [],
-  ] as const)
+  const mpMap = await getAllCampaignInstalls(campaignNames).catch(() => new Map())
+
+  // Collect all attributed phones from Mixpanel
+  const allAttributedPhones = new Set<string>()
+  for (const name of campaignNames) {
+    const bucket = (mpMap as Map<string, any>).get(name)
+    bucket?.users.forEach((u: any) => { if (u.phone) allAttributedPhones.add(u.phone) })
+  }
+
+  // Fetch Metabase only for those phones
+  const metabaseUsers = allAttributedPhones.size > 0
+    ? await getOnboardedUsers([...allAttributedPhones]).catch(() => [])
+    : []
 
   // Build phone → {company, name} map from Metabase
   const phoneToMeta = new Map<string, { company: string | null; name: string | null }>()
   for (const u of metabaseUsers as any[]) {
     if (u.phone) phoneToMeta.set(u.phone, { company: u.company, name: u.name })
-  }
-
-  // Collect all companies we need to classify
-  const allAttributedPhones = new Set<string>()
-  for (const name of campaignNames) {
-    const bucket = (mpMap as Map<string, any>).get(name)
-    bucket?.users.forEach((u: any) => { if (u.phone) allAttributedPhones.add(u.phone) })
   }
 
   const companiesToClassify: string[] = []

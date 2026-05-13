@@ -39,38 +39,40 @@ export async function GET(req: NextRequest) {
   // Normalize to lowercase - lrMap and mpMap both use lowercase keys
   const campaignNames = pilots.map(p => p.linkrunner_campaign_name?.toLowerCase().trim() ?? '')
 
-  // ── 3 parallel API calls: Linkrunner + Mixpanel + Metabase ──────────────
-  const [lrMap, mpMap, metabaseUsers] = await Promise.allSettled([
+  // ── 2 parallel API calls first: Linkrunner + Mixpanel ───────────────────
+  const [lrMap, mpMap] = await Promise.allSettled([
     getAllCampaignStats(),
     getAllCampaignInstalls(campaignNames),
-    getOnboardedUsers(),
-  ]).then(([lr, mp, mb]) => [
+  ]).then(([lr, mp]) => [
     lr.status === 'fulfilled' ? lr.value : new Map(),
     mp.status === 'fulfilled' ? mp.value : new Map(),
-    mb.status === 'fulfilled' ? mb.value : [],
   ] as const)
+
+  // Collect all attributed phones from Mixpanel across all campaigns
+  const allAttributedPhonesForMeta = new Set<string>()
+  for (const name of campaignNames) {
+    const bucket = (mpMap as Map<string, any>).get(name)
+    bucket?.users.forEach((u: any) => { if (u.phone) allAttributedPhonesForMeta.add(u.phone) })
+  }
+
+  // ── Metabase: fetch profiles only for phones we actually care about ───────
+  const metabaseUsers = allAttributedPhonesForMeta.size > 0
+    ? await getOnboardedUsers([...allAttributedPhonesForMeta]).catch(() => [])
+    : []
 
   console.log(`Linkrunner: ${(lrMap as Map<any,any>).size} campaigns | Metabase: ${(metabaseUsers as any[]).length} users`)
   console.log(`Linkrunner keys: [${[...(lrMap as Map<any,any>).keys()].join(', ')}]`)
   console.log(`Pilot campaign keys: [${campaignNames.join(', ')}]`)
 
-  // Build phone lookup maps, filtered to campaign-attributed phones only
-  const allAttributedPhones = new Set<string>()
-  for (const name of campaignNames) {
-    const bucket = (mpMap as Map<string, any>).get(name)
-    bucket?.users.forEach((u: any) => { if (u.phone) allAttributedPhones.add(u.phone) })
-  }
-
-  // phoneToCompany used for Gemini qualification (unchanged)
+  // Build phone lookup maps from Metabase results
+  // (already pre-filtered to attributed phones only)
   const phoneToCompany = new Map<string, string>()
-  // phoneToMeta carries full user details for pilot_installs table
   const phoneToMeta = new Map<string, { name: string | null; company: string | null; linkedin: string | null; onboarded_at: string | null }>()
 
   for (const u of metabaseUsers as any[]) {
-    if (u.phone && allAttributedPhones.has(u.phone)) {
-      if (u.company) phoneToCompany.set(u.phone, u.company.toLowerCase().trim())
-      phoneToMeta.set(u.phone, { name: u.name ?? null, company: u.company ?? null, linkedin: u.linkedin ?? null, onboarded_at: u.onboarded_at ?? null })
-    }
+    if (!u.phone) continue
+    if (u.company) phoneToCompany.set(u.phone, u.company.toLowerCase().trim())
+    phoneToMeta.set(u.phone, { name: u.name ?? null, company: u.company ?? null, linkedin: u.linkedin ?? null, onboarded_at: u.onboarded_at ?? null })
   }
 
   // Gemini: only classify companies of attributed+onboarded users
