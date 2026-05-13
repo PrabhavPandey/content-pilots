@@ -86,7 +86,7 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
 
       <div className="mb-5 pr-8">
         <p
-          className="text-[19px] font-semibold leading-tight"
+          className="text-[21px] font-semibold leading-tight"
           style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-poppins)' }}
         >
           {install.name ?? '—'}
@@ -107,13 +107,13 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
         {install.gemini_reason && (
           <div className="pt-3 mt-1" style={{ borderTop: '1px solid var(--border)' }}>
             <p
-              className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-2"
+              className="text-[12px] font-semibold tracking-[0.12em] uppercase mb-2"
               style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
             >
               Gemini rationale
             </p>
             <p
-              className="text-[13px] leading-relaxed"
+              className="text-[15px] leading-relaxed"
               style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-secondary)' }}
             >
               {install.gemini_reason}
@@ -122,11 +122,11 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
         )}
         {linkedinUrl ? (
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)' }}>
+            <span className="text-[13px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)' }}>
               LinkedIn
             </span>
             <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
-              className="text-[13px] text-blue-500 hover:text-blue-700 underline underline-offset-2">
+              className="text-[15px] text-blue-500 hover:text-blue-700 underline underline-offset-2">
               View profile ↗
             </a>
           </div>
@@ -143,10 +143,10 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
 function PopRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[11px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
+      <span className="text-[13px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
         {label}
       </span>
-      <span className="text-[13px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
+      <span className="text-[15px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
         {value}
       </span>
     </div>

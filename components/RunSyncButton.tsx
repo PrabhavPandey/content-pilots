@@ -38,7 +38,7 @@ export default function RunSyncButton() {
     <button
       onClick={handleClick}
       disabled={state === 'running'}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold tracking-[0.12em] uppercase transition-all"
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold tracking-[0.12em] uppercase transition-all"
       style={{
         fontFamily: 'var(--font-inconsolata)',
         color: '#fff',

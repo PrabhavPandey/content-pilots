@@ -18,7 +18,7 @@ export default function SyncBadge({ syncedAt }: { syncedAt: string | null }) {
         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
       </span>
       <span
-        className="text-[13px] font-medium"
+        className="text-[15px] font-medium"
         style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
       >
         Synced {formatSyncTime(syncedAt)}
