@@ -55,12 +55,76 @@ export async function GET(req: NextRequest) {
     metabaseRawTest = { exception: e?.message ?? String(e) }
   }
 
-  // Step 3: getOnboardedUsers with actual phones
+  // Step 3a: raw phone format check — what do phones look like in the DB?
+  let phoneFormatCheck: any = null
+  try {
+    const res = await fetch(`${BASE_URL}/api/dataset`, {
+      method: 'POST',
+      headers: { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        database: 12,
+        type: 'native',
+        native: { query: `SELECT phone::text, created_at FROM tal.users WHERE created_at >= '2026-05-06' LIMIT 5` },
+      }),
+      next: { revalidate: 0 },
+    })
+    const data = await res.json()
+    phoneFormatCheck = {
+      status: res.status,
+      rows: data?.data?.rows ?? null,
+      error: data?.error ?? null,
+    }
+  } catch (e: any) {
+    phoneFormatCheck = { exception: e?.message ?? String(e) }
+  }
+
+  // Step 3b: count of users since May 6
+  let recentUserCount: any = null
+  try {
+    const res = await fetch(`${BASE_URL}/api/dataset`, {
+      method: 'POST',
+      headers: { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        database: 12,
+        type: 'native',
+        native: { query: `SELECT COUNT(*) FROM tal.users WHERE created_at >= '2026-05-06'` },
+      }),
+      next: { revalidate: 0 },
+    })
+    const data = await res.json()
+    recentUserCount = { status: res.status, rows: data?.data?.rows ?? null, error: data?.error ?? null }
+  } catch (e: any) {
+    recentUserCount = { exception: e?.message ?? String(e) }
+  }
+
+  // Step 3c: try lookup WITHOUT date filter for first 5 phones
+  let noDateFilterTest: any = null
+  if (mpPhones.length > 0) {
+    const phoneList = mpPhones.slice(0, 5).map(p => `'${p}'`).join(', ')
+    try {
+      const res = await fetch(`${BASE_URL}/api/dataset`, {
+        method: 'POST',
+        headers: { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          database: 12,
+          type: 'native',
+          native: { query: `SELECT u.phone::text, u.created_at FROM tal.users u WHERE RIGHT(u.phone::text, 10) IN (${phoneList}) LIMIT 10` },
+        }),
+        next: { revalidate: 0 },
+      })
+      const data = await res.json()
+      noDateFilterTest = { status: res.status, rows: data?.data?.rows ?? null, error: data?.error ?? null }
+    } catch (e: any) {
+      noDateFilterTest = { exception: e?.message ?? String(e) }
+    }
+  }
+
+  // Step 3d: getOnboardedUsers with actual phones
   let metaUsers: any[] = []
   let metaError: string | null = null
   if (mpPhones.length > 0) {
     try {
-      metaUsers = await getOnboardedUsers(mpPhones.slice(0, 20)) // test with first 20
+      metaUsers = await getOnboardedUsers(mpPhones.slice(0, 20))
     } catch (e: any) {
       metaError = e?.message ?? String(e)
     }
@@ -73,9 +137,13 @@ export async function GET(req: NextRequest) {
       first_app_opens: mpFirstAppOpens,
       users_with_phone: mpPhones.length,
       sample_phones_last4: mpPhones.slice(0, 10).map(p => p.slice(-4)),
+      first_5_phones_full: mpPhones.slice(0, 5),
     },
     step2_metabase_connectivity: metabaseRawTest,
-    step3_metabase_phone_lookup: {
+    step3a_db_phone_format: phoneFormatCheck,
+    step3b_recent_user_count: recentUserCount,
+    step3c_lookup_no_date_filter: noDateFilterTest,
+    step3d_full_lookup: {
       error: metaError,
       phones_sent: Math.min(mpPhones.length, 20),
       users_returned: metaUsers.length,
