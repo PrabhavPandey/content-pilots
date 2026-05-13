@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
   const campaign  = req.nextUrl.searchParams.get('campaign') ?? 'aarchi'
   const pilotType = (req.nextUrl.searchParams.get('pilot_type') ?? 'ugc') as 'ugc' | 'influencer'
-  const limit     = parseInt(req.nextUrl.searchParams.get('limit') ?? '10')
+  const limit     = parseInt(req.nextUrl.searchParams.get('limit') ?? '100')
 
   const mpMap  = await getAllCampaignInstalls([campaign])
   const mpData = mpMap.get(campaign) ?? { first_app_opens: 0, users: [] }
@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
         city: mpUser.city,
         company: null,
         job_role: null,
+        linkedin: null,
         verdict: 'SKIP',
         reason: 'not found in Metabase — not yet onboarded',
       })
@@ -119,6 +120,7 @@ export async function GET(req: NextRequest) {
       city:        mpUser.city ?? null,
       company,
       job_role:    jobRole,
+      linkedin:    meta.linkedin ?? null,
       verdict,
       reason,
     })
