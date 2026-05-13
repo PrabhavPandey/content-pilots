@@ -16,6 +16,7 @@ export type MetabaseUser = {
   phone: string
   name: string | null
   company: string | null
+  job_role: string | null
   linkedin: string | null
   onboarded_at: string | null
 }
@@ -38,8 +39,9 @@ export async function getOnboardedUsers(normalizedPhones: string[]): Promise<Met
   const query = `
     SELECT
       u.phone,
-      u.name                        AS user_name,
-      ld.current_company->>'name'   AS current_company_name,
+      u.name                                                      AS user_name,
+      ld.current_company->>'name'                                 AS current_company_name,
+      COALESCE(ld.position, ld.current_company->>'title')        AS job_role,
       ld.linkedin_url,
       ld.location,
       u.created_at
@@ -73,11 +75,12 @@ export async function getOnboardedUsers(normalizedPhones: string[]): Promise<Met
     const rows = runRows(data)
 
     return rows.map(row => ({
-      phone: String(row['phone'] ?? '').replace(/\D/g, '').slice(-10),
-      name:  row['user_name'] ? String(row['user_name']) : null,
-      company: row['current_company_name'] ? String(row['current_company_name']).trim() : null,
-      linkedin: row['linkedin_url'] ? String(row['linkedin_url']).trim() : null,
-      onboarded_at: row['created_at'] ? String(row['created_at']) : null,
+      phone:        String(row['phone'] ?? '').replace(/\D/g, '').slice(-10),
+      name:         row['user_name']           ? String(row['user_name']).trim()           : null,
+      company:      row['current_company_name']? String(row['current_company_name']).trim(): null,
+      job_role:     row['job_role']            ? String(row['job_role']).trim()            : null,
+      linkedin:     row['linkedin_url']        ? String(row['linkedin_url']).trim()        : null,
+      onboarded_at: row['created_at']          ? String(row['created_at'])                : null,
     })).filter(u => u.phone.length >= 8)
 
   } catch (err) {

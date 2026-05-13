@@ -1,13 +1,14 @@
 // Gemini qualification judge
-// Only called for companies of users who clicked a campaign link AND onboarded.
-// Results cached permanently in Supabase - each company is classified once, ever.
+// Uses two prompts: one for UGC pilots, one for influencer pilots.
+// Classifies by (company + job_role + pilot_type) — results cached in Supabase.
+// Cache key stored in company_classifications.company_name as "{company}|||{jobRole}|||{type}"
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getServiceClient } from './db'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' })
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
 
 const QUALIFIED_CITIES = [
   'bangalore', 'bengaluru',
@@ -23,68 +24,114 @@ export function isCityQualified(city: string | null | undefined): boolean {
   return QUALIFIED_CITIES.some(c => city.toLowerCase().includes(c))
 }
 
-const QUALIFICATION_PROMPT = `You are evaluating whether a company is a good target for TAL, a career platform for startup and tech professionals in India.
+// ── Prompts ──────────────────────────────────────────────────────────────────
 
-Company to evaluate: {company}
+const UGC_PROMPT = `You are a classifier for TAL, an AI career app for working professionals in India.
+Given a company name and job role, respond with exactly one word: QUALIFIED or NOT_QUALIFIED
 
-DEFAULT RULE: Respond QUALIFIED unless the company clearly matches one of the NOT_QUALIFIED cases below. When in doubt, always respond QUALIFIED.
+QUALIFIED if:
+- The person works in a white-collar role: software engineering, product, design, growth, marketing, business development, strategy, consulting, analytics, finance, or any management/leadership role
+- The company is a startup, product company, SaaS company, tech company, consulting firm, agency, fintech, healthtech, edtech, or global tech brand
 
-NOT_QUALIFIED — respond NOT_QUALIFIED ONLY if the company is unambiguously one of these:
-1. A Tier-1 IT outsourcing / body-shopping giant: TCS, Infosys, Wipro, Cognizant, HCL Technologies, Capgemini, Accenture, Tech Mahindra, Mphasis, LTIMindtree, L&T Technology Services, NIIT Technologies, Hexaware, Birlasoft, Persistent Systems, Mastech, Zensar, Coforge, or any company whose primary business is IT staffing or outsourcing contracts
-2. A government body, PSU, defence org, or public sector bank: DRDO, ISRO, BSNL, SBI, PNB, Canara Bank, Indian Railways, ONGC, Coal India, HAL, etc.
-3. A college, university, school, or coaching institute: IIT, IIM, Unacademy, BYJU's as an institution, etc.
-4. Not a real company: "student", "unemployed", "freelancer", "self employed", "NA", "N/A", blank, or clearly nonsense
+NOT_QUALIFIED if:
+- Job role is: student, intern, fresher, blue-collar, customer service, admin, data entry, operations support, field sales, driver, delivery, or any non-desk role
+- Company is a Tier-1 IT outsourcing firm: TCS, Infosys, Wipro, Cognizant, HCL Technologies, Capgemini, Tech Mahindra, Mphasis, LTIMindtree, Hexaware, Birlasoft, Coforge, Zensar, or similar IT services/staffing company
+- Company is a government body, PSU, public sector bank, school, college, or university
+- Company field is blank, "NA", "student", "freelancer", or clearly not a real company
 
-QUALIFIED — everything else. This includes:
-- Any startup you've heard of or not — Indian startups rarely have famous names
-- Small software / tech / SaaS companies with generic-sounding names (e.g. "Teamware Solutions", "EISystems", "Zophrix", "Karkhana")
-- Product companies, agencies, consulting firms, fintech, edtech, healthtech, media companies
-- Global tech companies (Google, Microsoft, Amazon, Meta, etc.)
-- Indian new-age companies (Swiggy, Zomato, CRED, Razorpay, Zepto, etc.)
+When the company sounds like a small Indian IT services or outsourcing firm (body-shopping, staffing, IT contracts), default to NOT_QUALIFIED.
 
-Respond with exactly one word: QUALIFIED or NOT_QUALIFIED`
+Company: {company}
+Job role: {job_role}`
 
-// In-memory cache for this function invocation
+const INFLUENCER_PROMPT = `You are a classifier for TAL, an AI career app for working professionals in India.
+Given a company name and job role, respond with exactly one word: QUALIFIED or NOT_QUALIFIED
+
+QUALIFIED only if BOTH are true:
+- Job role is: software engineer, developer, engineering manager, VP Engineering, CTO, product manager, product lead, or a direct variant of these
+- Company is a startup or a global product/tech company (e.g. Google, Microsoft, Amazon, Meta, Apple, Uber, LinkedIn, Salesforce, Adobe, Atlassian)
+
+NOT_QUALIFIED if either is true:
+- Job role is anything other than software engineering or product management
+- Company is a Tier-1 IT outsourcing firm: TCS, Infosys, Wipro, Cognizant, HCL Technologies, Capgemini, Tech Mahindra, Mphasis, LTIMindtree, Hexaware, Birlasoft, Coforge, Zensar, or similar IT services/staffing company
+- Company is a government body, PSU, public sector bank, school, college, or university
+- Company field is blank, "NA", "student", "freelancer", or clearly not a real company
+- You are unsure if the company is a product startup or an IT services firm — default to NOT_QUALIFIED
+
+Company: {company}
+Job role: {job_role}`
+
+// ── Cache key ─────────────────────────────────────────────────────────────────
+
+export function buildCacheKey(company: string, jobRole: string | null, pilotType: string): string {
+  return `${company.toLowerCase().trim()}|||${(jobRole ?? '').toLowerCase().trim()}|||${pilotType}`
+}
+
+// ── In-memory session cache (per serverless invocation) ───────────────────────
+
 const sessionCache = new Map<string, boolean>()
 
-// Call Gemini and persist result. Only call this when we KNOW the company is not cached.
-async function callGemini(companyKey: string, db: SupabaseClient): Promise<boolean> {
+// ── Gemini call + persist ─────────────────────────────────────────────────────
+
+async function callGemini(
+  company: string,
+  jobRole: string | null,
+  pilotType: 'ugc' | 'influencer',
+  db: SupabaseClient
+): Promise<boolean> {
+  const cacheKey = buildCacheKey(company, jobRole, pilotType)
   try {
-    const prompt = QUALIFICATION_PROMPT.replace('{company}', companyKey)
+    const template = pilotType === 'ugc' ? UGC_PROMPT : INFLUENCER_PROMPT
+    const prompt = template
+      .replace('{company}', company || 'unknown')
+      .replace('{job_role}', jobRole || 'unknown')
+
     const result = await model.generateContent(prompt)
     const text = result.response.text().trim().toUpperCase()
     const isQualified = text.includes('QUALIFIED') && !text.includes('NOT_QUALIFIED')
 
     await db.from('company_classifications').upsert({
-      company_name: companyKey,
+      company_name: cacheKey,
       is_startup: isQualified,
       classified_at: new Date().toISOString(),
     }, { onConflict: 'company_name' })
 
-    sessionCache.set(companyKey, isQualified)
-    console.log(`Gemini: "${companyKey}" → ${isQualified ? 'startup' : 'not startup'}`)
+    sessionCache.set(cacheKey, isQualified)
+    console.log(`Gemini [${pilotType}]: "${company}" / "${jobRole}" → ${isQualified ? 'QUALIFIED' : 'NOT_QUALIFIED'}`)
     return isQualified
   } catch (err) {
-    console.error(`Gemini failed for "${companyKey}":`, err)
+    console.error(`Gemini failed for "${cacheKey}":`, err)
     return false
   }
 }
 
-// Batch classify companies.
-// 1. Single Supabase query for all → split into cached / uncached.
-// 2. For uncached: call Gemini in parallel batches of 5 (no redundant DB check per company).
-// 3. Returns a map of company_name → is_startup.
-export async function batchClassifyCompanies(
-  companies: string[],
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export type UserToClassify = {
+  company: string
+  jobRole: string | null
+}
+
+// Batch classify users for a given pilot type.
+// Returns a Map keyed by buildCacheKey(company, jobRole, pilotType).
+export async function batchClassifyUsers(
+  users: UserToClassify[],
+  pilotType: 'ugc' | 'influencer',
   dbClient?: SupabaseClient
 ): Promise<Map<string, boolean>> {
   const results = new Map<string, boolean>()
-  if (companies.length === 0) return results
+  if (users.length === 0) return results
 
   const db = dbClient ?? getServiceClient()
-  const unique = [...new Set(companies.map(c => c?.toLowerCase().trim()).filter(Boolean))]
 
-  // Single bulk Supabase lookup
+  // Deduplicate by cache key
+  const unique = [...new Set(
+    users
+      .filter(u => u.company?.trim())
+      .map(u => buildCacheKey(u.company, u.jobRole, pilotType))
+  )]
+
+  // Bulk Supabase lookup
   const { data: cached } = await db
     .from('company_classifications')
     .select('company_name, is_startup')
@@ -92,25 +139,24 @@ export async function batchClassifyCompanies(
 
   const cachedMap = new Map((cached ?? []).map(r => [r.company_name, r.is_startup]))
 
-  // Session cache hits + Supabase hits
-  const uncached = unique.filter(c => !cachedMap.has(c) && !sessionCache.has(c))
+  const uncached = unique.filter(k => !cachedMap.has(k) && !sessionCache.has(k))
 
   if (uncached.length > 0) {
-    console.log(`Gemini: ${cachedMap.size + sessionCache.size} cached, ${uncached.length} to classify`)
-    // Parallel batches of 5 — no per-company Supabase check (already done above)
+    console.log(`Gemini [${pilotType}]: ${cachedMap.size + sessionCache.size} cached, ${uncached.length} to classify`)
     for (let i = 0; i < uncached.length; i += 5) {
       const batch = uncached.slice(i, i + 5)
-      await Promise.all(batch.map(c => callGemini(c, db)))
+      await Promise.all(batch.map(key => {
+        const [company, jobRole] = key.split('|||')
+        return callGemini(company, jobRole || null, pilotType, db)
+      }))
       if (i + 5 < uncached.length) await new Promise(r => setTimeout(r, 200))
     }
   } else {
-    console.log(`Gemini: all ${unique.length} from cache — 0 API calls`)
+    console.log(`Gemini [${pilotType}]: all ${unique.length} from cache — 0 API calls`)
   }
 
-  for (const company of companies) {
-    const key = company?.toLowerCase().trim()
-    if (!key) { results.set(company, false); continue }
-    results.set(company, sessionCache.get(key) ?? cachedMap.get(key) ?? false)
+  for (const key of unique) {
+    results.set(key, sessionCache.get(key) ?? cachedMap.get(key) ?? false)
   }
 
   return results

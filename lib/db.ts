@@ -48,6 +48,7 @@ export type PilotInstall = {
   phone: string | null
   name: string | null
   company: string | null
+  job_role: string | null
   city: string | null
   linkedin: string | null
   onboarded_at: string | null

@@ -97,6 +97,7 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
 
       <div className="space-y-2.5">
         <PopRow label="Company"      value={install.company ?? '—'} />
+        <PopRow label="Role"         value={install.job_role ?? '—'} />
         <PopRow label="City"         value={install.city ?? '—'} />
         <PopRow label="Onboarded"    value={formatDate(install.onboarded_at)} />
         <PopRow label="Phone"        value={install.phone ?? '—'} />
