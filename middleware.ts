@@ -13,8 +13,8 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
-  // Protect cron endpoint - auth handled inside the route itself (CRON_SECRET)
-  if (pathname.startsWith('/api/cron')) {
+  // Cron + debug endpoints - auth handled inside each route via CRON_SECRET
+  if (pathname.startsWith('/api/cron') || pathname.startsWith('/api/debug')) {
     return NextResponse.next()
   }
 
