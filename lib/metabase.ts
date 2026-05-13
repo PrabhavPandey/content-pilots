@@ -38,13 +38,13 @@ export async function getOnboardedUsers(normalizedPhones: string[]): Promise<Met
   const query = `
     SELECT
       u.phone,
-      u.name         AS user_name,
-      ld.current_company_name,
+      u.name                        AS user_name,
+      ld.current_company->>'name'   AS current_company_name,
       ld.linkedin_url,
       ld.location,
       u.created_at
     FROM tal.users u
-    LEFT JOIN tal.user_linkedin_data ld ON ld.phone = u.phone
+    LEFT JOIN tal.user_linkedin_data ld ON ld.user_phone = u.phone
     WHERE RIGHT(u.phone::text, 10) IN (${phoneList})
       AND u.created_at >= '${PILOT_START_DATE}'
     LIMIT 2000
