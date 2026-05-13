@@ -62,40 +62,41 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
   const modal = (
     <div
       ref={ref}
-      className="w-72 rounded-2xl p-5"
+      className="rounded-2xl p-7"
       style={{
         position: 'fixed',
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
         zIndex: 9999,
+        width: 420,
         background: '#FFFFFF',
         border: '1px solid var(--border)',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.14)',
+        boxShadow: '0 12px 56px rgba(0,0,0,0.16)',
         fontFamily: 'var(--font-inconsolata)',
       }}
     >
       <button
         onClick={onClose}
-        className="absolute top-3.5 right-3.5 w-6 h-6 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors text-[15px] leading-none"
+        className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full hover:bg-stone-100 transition-colors text-[17px] leading-none"
         style={{ color: 'var(--text-muted)' }}
       >
         ×
       </button>
 
-      <div className="mb-4 pr-6">
+      <div className="mb-5 pr-8">
         <p
-          className="text-[15px] font-semibold leading-tight"
+          className="text-[19px] font-semibold leading-tight"
           style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-poppins)' }}
         >
           {install.name ?? '—'}
         </p>
-        <div className="mt-1.5">
+        <div className="mt-2">
           <QualBadge ok={install.is_qualified} />
         </div>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3.5">
         <PopRow label="Company"      value={install.company ?? '—'} />
         <PopRow label="Role"         value={install.job_role ?? '—'} />
         <PopRow label="City"         value={install.city ?? '—'} />
@@ -104,15 +105,15 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
         <PopRow label="City qual"    value={<QualBadge ok={install.is_city_qualified} />} />
         <PopRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
         {install.gemini_reason && (
-          <div className="pt-2 mt-1" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="pt-3 mt-1" style={{ borderTop: '1px solid var(--border)' }}>
             <p
-              className="text-[9px] font-semibold tracking-[0.12em] uppercase mb-1"
+              className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-2"
               style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
             >
               Gemini rationale
             </p>
             <p
-              className="text-[11px] leading-relaxed"
+              className="text-[13px] leading-relaxed"
               style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-secondary)' }}
             >
               {install.gemini_reason}
@@ -121,11 +122,11 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
         )}
         {linkedinUrl ? (
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)' }}>
+            <span className="text-[11px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)' }}>
               LinkedIn
             </span>
             <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
-              className="text-[11px] text-blue-500 hover:text-blue-700 underline underline-offset-2">
+              className="text-[13px] text-blue-500 hover:text-blue-700 underline underline-offset-2">
               View profile ↗
             </a>
           </div>
@@ -142,10 +143,10 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
 function PopRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
+      <span className="text-[11px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
         {label}
       </span>
-      <span className="text-[11px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
+      <span className="text-[13px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
         {value}
       </span>
     </div>
