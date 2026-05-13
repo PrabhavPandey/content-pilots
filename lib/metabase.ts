@@ -41,7 +41,7 @@ export async function getOnboardedUsers(normalizedPhones: string[]): Promise<Met
       u.phone,
       u.name                                                      AS user_name,
       ld.current_company->>'name'                                 AS current_company_name,
-      COALESCE(ld.position, ld.current_company->>'title')        AS job_role,
+      COALESCE(ld.current_company->>'title', ld.position)        AS job_role,
       ld.linkedin_url,
       ld.location,
       u.created_at
