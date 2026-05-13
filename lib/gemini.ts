@@ -23,25 +23,24 @@ export function isCityQualified(city: string | null | undefined): boolean {
   return QUALIFIED_CITIES.some(c => city.toLowerCase().includes(c))
 }
 
-const QUALIFICATION_PROMPT = `You are evaluating whether an Indian professional is a good install for TAL, a career platform for people at startups and tech companies in India.
+const QUALIFICATION_PROMPT = `You are evaluating whether a company is a good target for TAL, a career platform for startup and tech professionals in India.
 
 Company to evaluate: {company}
 
-All users are based in Indian metro cities. Evaluate only whether the company is worth targeting.
+DEFAULT RULE: Respond QUALIFIED unless the company clearly matches one of the NOT_QUALIFIED cases below. When in doubt, always respond QUALIFIED.
 
-QUALIFIED — respond QUALIFIED if the company is any of:
-- Any startup (seed, early, growth, or late stage) operating in India or globally
-- Any Indian product or tech company
-- Any well-known global tech company (Google, Amazon, Microsoft, Flipkart, Swiggy, Zomato, Razorpay, CRED, etc.)
-- Any company name you don't recognise — unknown names are almost always Indian startups, so default to QUALIFIED
+NOT_QUALIFIED — respond NOT_QUALIFIED ONLY if the company is unambiguously one of these:
+1. A Tier-1 IT outsourcing / body-shopping giant: TCS, Infosys, Wipro, Cognizant, HCL Technologies, Capgemini, Accenture, Tech Mahindra, Mphasis, LTIMindtree, L&T Technology Services, NIIT Technologies, Hexaware, Birlasoft, Persistent Systems, Mastech, Zensar, Coforge, or any company whose primary business is IT staffing or outsourcing contracts
+2. A government body, PSU, defence org, or public sector bank: DRDO, ISRO, BSNL, SBI, PNB, Canara Bank, Indian Railways, ONGC, Coal India, HAL, etc.
+3. A college, university, school, or coaching institute: IIT, IIM, Unacademy, BYJU's as an institution, etc.
+4. Not a real company: "student", "unemployed", "freelancer", "self employed", "NA", "N/A", blank, or clearly nonsense
 
-NOT_QUALIFIED — respond NOT_QUALIFIED only if the company is clearly:
-- A mass IT outsourcing or body-shopping firm: TCS, Infosys, Wipro, Cognizant, HCL, Capgemini, Accenture, Tech Mahindra, Mphasis, L&T Infotech, NIIT Technologies, Hexaware, Mindtree (pre-LTI merger), or any similar firm whose primary business is IT staffing
-- A government body, PSU, defence organisation, or public sector bank (SBI, PNB, etc.)
-- A college, university, school, or coaching institute
-- Not a company at all: "unemployed", "student", "freelancer", "NA", blank, or clearly fake
-
-IMPORTANT: If you are unsure or the company name is unfamiliar, respond QUALIFIED. Most unknown company names in this context are Indian startups.
+QUALIFIED — everything else. This includes:
+- Any startup you've heard of or not — Indian startups rarely have famous names
+- Small software / tech / SaaS companies with generic-sounding names (e.g. "Teamware Solutions", "EISystems", "Zophrix", "Karkhana")
+- Product companies, agencies, consulting firms, fintech, edtech, healthtech, media companies
+- Global tech companies (Google, Microsoft, Amazon, Meta, etc.)
+- Indian new-age companies (Swiggy, Zomato, CRED, Razorpay, Zepto, etc.)
 
 Respond with exactly one word: QUALIFIED or NOT_QUALIFIED`
 

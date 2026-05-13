@@ -6,6 +6,7 @@ import PilotCard from '@/components/PilotCard'
 import InstallerTable from '@/components/InstallerTable'
 import SyncBadge from '@/components/SyncBadge'
 import QualificationCarousel from '@/components/QualificationCarousel'
+import CumulativeSummary from '@/components/CumulativeSummary'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,6 +58,7 @@ export default async function DashboardPage() {
         </div>
       ) : isAdmin ? (
         <div className="space-y-10">
+          <CumulativeSummary metrics={metrics} installsMap={installsMap} />
           {influencers.length > 0 && (
             <section>
               <p
