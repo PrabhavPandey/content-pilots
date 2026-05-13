@@ -123,17 +123,20 @@ export async function GET(req: NextRequest) {
         name: string | null; company: string | null; job_role: string | null
         linkedin: string | null; onboarded_at: string | null
         is_city_qualified: boolean; is_company_qualified: boolean; is_qualified: boolean
+        gemini_reason: string | null
       }> = []
 
       for (const mpUser of mpData.users) {
         const meta = phoneToMeta.get(mpUser.phone)
         if (!meta) continue // not found in Metabase — hasn't onboarded
 
-        const cityOk = pilotType === 'influencer' ? isCityQualified(mpUser.city) : true
+        const cityOk    = pilotType === 'influencer' ? isCityQualified(mpUser.city) : true
         const companyKey = meta.company?.toLowerCase().trim() ?? ''
         const cacheKey   = buildCacheKey(companyKey, meta.job_role, pilotType)
-        const companyOk  = companyKey ? (classMap.get(cacheKey) ?? false) : false
-        const isQualified = cityOk && companyOk
+        const entry      = companyKey ? classMap.get(cacheKey) : undefined
+        const companyOk  = entry?.qualified ?? false
+        const geminiReason = entry?.reason ?? null
+        const isQualified  = cityOk && companyOk
 
         if (isQualified) qualifiedInstalls++
 
@@ -148,6 +151,7 @@ export async function GET(req: NextRequest) {
           is_city_qualified:    cityOk,
           is_company_qualified: companyOk,
           is_qualified:         isQualified,
+          gemini_reason:        geminiReason,
         })
       }
 

@@ -103,6 +103,22 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
         <PopRow label="Phone"        value={install.phone ?? '—'} />
         <PopRow label="City qual"    value={<QualBadge ok={install.is_city_qualified} />} />
         <PopRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
+        {install.gemini_reason && (
+          <div className="pt-2 mt-1" style={{ borderTop: '1px solid var(--border)' }}>
+            <p
+              className="text-[9px] font-semibold tracking-[0.12em] uppercase mb-1"
+              style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+            >
+              Gemini rationale
+            </p>
+            <p
+              className="text-[11px] leading-relaxed"
+              style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-secondary)' }}
+            >
+              {install.gemini_reason}
+            </p>
+          </div>
+        )}
         {linkedinUrl ? (
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)' }}>

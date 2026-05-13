@@ -55,6 +55,7 @@ export type PilotInstall = {
   is_city_qualified: boolean
   is_company_qualified: boolean
   is_qualified: boolean
+  gemini_reason: string | null
 }
 
 export type User = {

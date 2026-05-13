@@ -27,7 +27,7 @@ export function isCityQualified(city: string | null | undefined): boolean {
 // ── Prompts ──────────────────────────────────────────────────────────────────
 
 const UGC_PROMPT = `You are a classifier for TAL, an AI career app for working professionals in India.
-Given a company name and job role, respond with exactly one word: QUALIFIED or NOT_QUALIFIED
+Given a company name and job role, respond with QUALIFIED or NOT_QUALIFIED, then explain your reasoning in one sentence.
 
 QUALIFIED if:
 - The person works in a white-collar role: software engineering, product, design, growth, marketing, business development, strategy, consulting, analytics, finance, or any management/leadership role
@@ -44,10 +44,14 @@ NOT_QUALIFIED if:
 When the company sounds like a small Indian IT services or outsourcing firm, default to NOT_QUALIFIED.
 
 Company: {company}
-Job role: {job_role}`
+Job role: {job_role}
+
+Respond in this exact format:
+VERDICT: QUALIFIED or NOT_QUALIFIED
+REASON: one sentence explaining why`
 
 const INFLUENCER_PROMPT = `You are a classifier for TAL, an AI career app for working professionals in India.
-Given a company name and job role, respond with exactly one word: QUALIFIED or NOT_QUALIFIED
+Given a company name and job role, respond with QUALIFIED or NOT_QUALIFIED, then explain your reasoning in one sentence.
 
 QUALIFIED only if BOTH are true:
 - Job role is: software engineer, developer, engineering manager, VP Engineering, CTO, product manager, product lead, or a direct variant of these
@@ -61,7 +65,11 @@ NOT_QUALIFIED if either is true:
 - You are unsure if the company is a product startup or an IT services firm — default to NOT_QUALIFIED
 
 Company: {company}
-Job role: {job_role}`
+Job role: {job_role}
+
+Respond in this exact format:
+VERDICT: QUALIFIED or NOT_QUALIFIED
+REASON: one sentence explaining why`
 
 // ── Cache key ─────────────────────────────────────────────────────────────────
 
@@ -71,7 +79,8 @@ export function buildCacheKey(company: string, jobRole: string | null, pilotType
 
 // ── In-memory session cache (per serverless invocation) ───────────────────────
 
-const sessionCache = new Map<string, boolean>()
+type CacheEntry = { qualified: boolean; reason: string | null }
+const sessionCache = new Map<string, CacheEntry>()
 
 // ── Gemini call + persist ─────────────────────────────────────────────────────
 
@@ -80,7 +89,7 @@ async function callGemini(
   jobRole: string | null,
   pilotType: 'ugc' | 'influencer',
   db: SupabaseClient
-): Promise<boolean> {
+): Promise<CacheEntry> {
   const cacheKey = buildCacheKey(company, jobRole, pilotType)
   try {
     const template = pilotType === 'ugc' ? UGC_PROMPT : INFLUENCER_PROMPT
@@ -89,21 +98,28 @@ async function callGemini(
       .replace('{job_role}', jobRole || 'unknown')
 
     const result = await model.generateContent(prompt)
-    const text = result.response.text().trim().toUpperCase()
-    const isQualified = text.includes('QUALIFIED') && !text.includes('NOT_QUALIFIED')
+    const text = result.response.text().trim()
+
+    const verdictMatch = text.match(/VERDICT:\s*(QUALIFIED|NOT_QUALIFIED)/i)
+    const reasonMatch  = text.match(/REASON:\s*(.+)/i)
+
+    const isQualified = verdictMatch?.[1]?.toUpperCase() === 'QUALIFIED'
+    const reason      = reasonMatch?.[1]?.trim() ?? null
 
     await db.from('company_classifications').upsert({
       company_name: cacheKey,
       is_startup: isQualified,
+      reason,
       classified_at: new Date().toISOString(),
     }, { onConflict: 'company_name' })
 
-    sessionCache.set(cacheKey, isQualified)
+    const entry: CacheEntry = { qualified: isQualified, reason }
+    sessionCache.set(cacheKey, entry)
     console.log(`Gemini [${pilotType}]: "${company}" / "${jobRole}" → ${isQualified ? 'QUALIFIED' : 'NOT_QUALIFIED'}`)
-    return isQualified
+    return entry
   } catch (err) {
     console.error(`Gemini failed for "${cacheKey}":`, err)
-    return false
+    return { qualified: false, reason: null }
   }
 }
 
@@ -120,8 +136,8 @@ export async function batchClassifyUsers(
   users: UserToClassify[],
   pilotType: 'ugc' | 'influencer',
   dbClient?: SupabaseClient
-): Promise<Map<string, boolean>> {
-  const results = new Map<string, boolean>()
+): Promise<Map<string, CacheEntry>> {
+  const results = new Map<string, CacheEntry>()
   if (users.length === 0) return results
 
   const db = dbClient ?? getServiceClient()
@@ -136,10 +152,12 @@ export async function batchClassifyUsers(
   // Bulk Supabase lookup
   const { data: cached } = await db
     .from('company_classifications')
-    .select('company_name, is_startup')
+    .select('company_name, is_startup, reason')
     .in('company_name', unique)
 
-  const cachedMap = new Map((cached ?? []).map(r => [r.company_name, r.is_startup]))
+  const cachedMap = new Map(
+    (cached ?? []).map(r => [r.company_name, { qualified: r.is_startup as boolean, reason: r.reason as string | null }])
+  )
 
   const uncached = unique.filter(k => !cachedMap.has(k) && !sessionCache.has(k))
 
@@ -158,7 +176,7 @@ export async function batchClassifyUsers(
   }
 
   for (const key of unique) {
-    results.set(key, sessionCache.get(key) ?? cachedMap.get(key) ?? false)
+    results.set(key, sessionCache.get(key) ?? cachedMap.get(key) ?? { qualified: false, reason: null })
   }
 
   return results
