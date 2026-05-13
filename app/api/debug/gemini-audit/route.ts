@@ -15,16 +15,17 @@ Given a company name and job role, respond with QUALIFIED or NOT_QUALIFIED, then
 
 QUALIFIED if:
 - The person works in a white-collar role: software engineering, product, design, growth, marketing, business development, strategy, consulting, analytics, finance, or any management/leadership role
-- The company is a startup, product company, SaaS company, tech company, consulting firm, agency, fintech, healthtech, edtech, or global tech brand
+- The company is a startup, product company, SaaS company, tech company, consulting firm, agency, fintech, healthtech, edtech, global tech brand, or a talent-dense professional services firm (e.g. Genpact, EXL, WNS)
 
 NOT_QUALIFIED if:
-- Job role is: student, intern, fresher, blue-collar, customer service, admin, data entry, operations support, field sales, driver, delivery, or any non-desk role
+- Job role is: student, intern, fresher, apprentice, blue-collar, customer service, admin, data entry, operations support, field sales, or any non-desk role
 - Company is a Tier-1 IT outsourcing firm: TCS, Infosys, Wipro, Cognizant, HCL Technologies, Capgemini, Tech Mahindra, Mphasis, LTIMindtree, Hexaware, Birlasoft, Coforge, Zensar, or similar IT services/staffing company
-- Company is a government body, PSU, public sector bank, school, college, or university
-- Company is in manufacturing, retail, FMCG, real estate, logistics, paper/printing, construction, or any non-tech industry
-- Company field is blank, "NA", "student", "freelancer", or clearly not a real company
+- Company is a government body, PSU, or public sector bank (e.g. DRDO, ISRO, SBI, Coal India). Private financial institutions (e.g. NSE, BSE, HDFC, ICICI) are QUALIFIED.
+- Company is a school, college, university, or coaching institute
+- Company field is blank, "NA", "unknown", "student", "freelancer", "personal projects", or clearly not a real company
+- Company is clearly non-tech: hotels, restaurants, retail, manufacturing, construction, or real estate
 
-When the company sounds like a small Indian IT services or outsourcing firm (body-shopping, staffing, IT contracts), default to NOT_QUALIFIED.
+When the company sounds like a small Indian IT services or outsourcing firm, default to NOT_QUALIFIED.
 
 Company: {company}
 Job role: {job_role}

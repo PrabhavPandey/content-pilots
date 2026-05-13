@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
         const meta = phoneToMeta.get(mpUser.phone)
         if (!meta) continue // not found in Metabase — hasn't onboarded
 
-        const cityOk = isCityQualified(mpUser.city)
+        const cityOk = pilotType === 'influencer' ? isCityQualified(mpUser.city) : true
         const companyKey = meta.company?.toLowerCase().trim() ?? ''
         const cacheKey   = buildCacheKey(companyKey, meta.job_role, pilotType)
         const companyOk  = companyKey ? (classMap.get(cacheKey) ?? false) : false
