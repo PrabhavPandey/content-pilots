@@ -79,7 +79,7 @@ export function buildCacheKey(company: string, jobRole: string | null, pilotType
 
 // ── In-memory session cache (per serverless invocation) ───────────────────────
 
-type CacheEntry = { qualified: boolean; reason: string | null }
+export type CacheEntry = { qualified: boolean; reason: string | null }
 const sessionCache = new Map<string, CacheEntry>()
 
 // ── Gemini call + persist ─────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ import { getServiceClient } from '@/lib/db'
 import { getAllCampaignStats } from '@/lib/linkrunner'
 import { getAllCampaignInstalls } from '@/lib/mixpanel'
 import { getOnboardedUsers } from '@/lib/metabase'
-import { isCityQualified, batchClassifyUsers, buildCacheKey } from '@/lib/gemini'
+import { isCityQualified, batchClassifyUsers, buildCacheKey, type CacheEntry } from '@/lib/gemini'
 
 export async function GET(req: NextRequest) {
   const secret =
@@ -101,8 +101,8 @@ export async function GET(req: NextRequest) {
   }
 
   const [ugcClassMap, influencerClassMap] = await Promise.all([
-    ugcUsers.length > 0        ? batchClassifyUsers(ugcUsers,        'ugc',        db) : Promise.resolve(new Map<string, boolean>()),
-    influencerUsers.length > 0 ? batchClassifyUsers(influencerUsers, 'influencer', db) : Promise.resolve(new Map<string, boolean>()),
+    ugcUsers.length > 0        ? batchClassifyUsers(ugcUsers,        'ugc',        db) : Promise.resolve(new Map<string, CacheEntry>()),
+    influencerUsers.length > 0 ? batchClassifyUsers(influencerUsers, 'influencer', db) : Promise.resolve(new Map<string, CacheEntry>()),
   ])
 
   // ── Per-pilot qualification + write ─────────────────────────────────────
