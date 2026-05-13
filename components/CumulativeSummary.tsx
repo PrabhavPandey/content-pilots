@@ -94,7 +94,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
   }, 0)
 
   const totalClicks    = metrics.reduce((s, m) => s + (m.lr_clicks ?? 0), 0)
-  const totalInstalls  = metrics.reduce((s, m) => s + (m.mp_first_app_opens ?? 0), 0)
+  const totalInstalls  = metrics.reduce((s, m) => s + (m.lr_installs ?? 0), 0)
   const totalSignups   = metrics.reduce((s, m) => s + (m.lr_signups ?? 0), 0)
   const totalOnboarded = [...installsMap.values()].reduce((s, arr) => s + arr.length, 0)
   const totalQualified = metrics.reduce((s, m) => s + (m.qualified_installs ?? 0), 0)
