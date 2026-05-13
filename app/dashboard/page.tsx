@@ -30,34 +30,31 @@ export default async function DashboardPage() {
   return (
     <div className="fade-up">
       {/* Page header */}
-      <div className="mb-10 flex items-start justify-between gap-4">
-        <div>
-          {!isAdmin && (
-            <p
-              className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-2"
-              style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-            >
-              Your Campaign
-            </p>
-          )}
-          <h1
-            className="text-[26px] font-semibold leading-tight"
-            style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
+      <div className="mb-10">
+        {!isAdmin && (
+          <p
+            className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-2"
+            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
-            {isAdmin ? 'Pilots' : (metrics[0]?.pilot.name ?? 'Dashboard')}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isAdmin
-              ? `UGC & Influencer · ${monthYear}`
-              : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
+            Your Campaign
           </p>
-          {latestSync && <SyncBadge syncedAt={latestSync} />}
-        </div>
-        {isAdmin && (
-          <div className="mt-1 shrink-0">
-            <RunSyncButton />
-          </div>
         )}
+        <h1
+          className="text-[26px] font-semibold leading-tight"
+          style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
+        >
+          {isAdmin ? 'Pilots' : (metrics[0]?.pilot.name ?? 'Dashboard')}
+        </h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+          {isAdmin
+            ? `UGC & Influencer · ${monthYear}`
+            : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
+        </p>
+        {/* Sync badge + run button on the same row */}
+        <div className="flex items-center gap-3 mt-2">
+          {latestSync && <SyncBadge syncedAt={latestSync} />}
+          {isAdmin && <RunSyncButton />}
+        </div>
       </div>
 
       {metrics.length === 0 ? (
