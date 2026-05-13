@@ -8,7 +8,7 @@ import { getOnboardedUsers } from '@/lib/metabase'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
+const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' })
 
 const UGC_PROMPT_WITH_REASON = `You are a classifier for TAL, an AI career app for working professionals in India.
 Given a company name and job role, respond with QUALIFIED or NOT_QUALIFIED, then explain your reasoning in one sentence.
