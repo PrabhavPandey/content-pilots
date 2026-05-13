@@ -119,7 +119,67 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Step 3d: getOnboardedUsers with actual phones
+  // Step 3d: run the EXACT getOnboardedUsers SQL raw so we can see any error
+  let exactQueryTest: any = null
+  if (mpPhones.length > 0) {
+    const phoneList = mpPhones.slice(0, 5).map(p => `'${p}'`).join(', ')
+    const exactQuery = `
+      SELECT
+        u.phone,
+        u.name AS user_name,
+        ld.current_company_name,
+        ld.linkedin_url,
+        ld.location,
+        u.created_at
+      FROM tal.users u
+      LEFT JOIN tal.user_linkedin_data ld ON ld.phone = u.phone
+      WHERE RIGHT(u.phone::text, 10) IN (${phoneList})
+        AND u.created_at >= '2026-05-06'
+      LIMIT 10
+    `
+    try {
+      const res = await fetch(`${BASE_URL}/api/dataset`, {
+        method: 'POST',
+        headers: { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ database: 12, type: 'native', native: { query: exactQuery } }),
+        next: { revalidate: 0 },
+      })
+      const data = await res.json()
+      exactQueryTest = {
+        status: res.status,
+        cols: data?.data?.cols?.map((c: any) => c.name) ?? null,
+        rows: data?.data?.rows ?? null,
+        error: data?.error ?? null,
+      }
+    } catch (e: any) {
+      exactQueryTest = { exception: e?.message ?? String(e) }
+    }
+  }
+
+  // Step 3e: check if user_linkedin_data join column is phone or user_id
+  let ldTableCheck: any = null
+  try {
+    const res = await fetch(`${BASE_URL}/api/dataset`, {
+      method: 'POST',
+      headers: { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        database: 12,
+        type: 'native',
+        native: { query: `SELECT * FROM tal.user_linkedin_data LIMIT 1` },
+      }),
+      next: { revalidate: 0 },
+    })
+    const data = await res.json()
+    ldTableCheck = {
+      status: res.status,
+      cols: data?.data?.cols?.map((c: any) => c.name) ?? null,
+      sample_row: data?.data?.rows?.[0] ?? null,
+      error: data?.error ?? null,
+    }
+  } catch (e: any) {
+    ldTableCheck = { exception: e?.message ?? String(e) }
+  }
+
   let metaUsers: any[] = []
   let metaError: string | null = null
   if (mpPhones.length > 0) {
@@ -143,7 +203,9 @@ export async function GET(req: NextRequest) {
     step3a_db_phone_format: phoneFormatCheck,
     step3b_recent_user_count: recentUserCount,
     step3c_lookup_no_date_filter: noDateFilterTest,
-    step3d_full_lookup: {
+    step3d_exact_query_raw: exactQueryTest,
+    step3e_linkedin_table_cols: ldTableCheck,
+    step3f_full_lookup: {
       error: metaError,
       phones_sent: Math.min(mpPhones.length, 20),
       users_returned: metaUsers.length,
