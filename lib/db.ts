@@ -131,15 +131,19 @@ export async function getLatestMetrics(pilotId?: string): Promise<MetricsWithPil
   return results
 }
 
-// Fetch all onboarded installs across all pilots (admin only).
+// Fetch onboarded installs. Pass pilotId to scope to one pilot (agency view).
 // Returns a map of pilot_id → installs array.
-export async function getAllPilotInstalls(): Promise<Map<string, PilotInstall[]>> {
+export async function getAllPilotInstalls(pilotId?: string): Promise<Map<string, PilotInstall[]>> {
   const db = getServiceClient()
-  const { data } = await db
+  let q = db
     .from('pilot_installs')
     .select('*')
     .order('is_qualified', { ascending: false })
     .order('name', { ascending: true })
+
+  if (pilotId) q = q.eq('pilot_id', pilotId)
+
+  const { data } = await q
 
   const map = new Map<string, PilotInstall[]>()
   for (const row of data ?? []) {

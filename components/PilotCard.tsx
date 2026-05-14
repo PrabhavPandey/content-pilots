@@ -6,6 +6,7 @@ type Props = {
   metrics: MetricsWithPilot
   isAdmin?: boolean
   budget?: number
+  videoCount?: number
   linkrunnerUrl?: string
   index?: number
 }
@@ -35,6 +36,7 @@ export default function PilotCard({
   metrics: m,
   isAdmin = false,
   budget,
+  videoCount,
   linkrunnerUrl,
   index = 0,
 }: Props) {
@@ -44,9 +46,10 @@ export default function PilotCard({
   const qualifiedDelta = delta(m.qualified_installs, m.prev?.qualified_installs)
   const installsDelta  = delta(m.lr_installs, m.prev?.lr_installs)
 
-  const costPerQualified =
-    budget && m.qualified_installs > 0
-      ? Math.round(budget / m.qualified_installs)
+  const isUgc = m.pilot.type === 'ugc'
+  const costPerVideo =
+    budget && videoCount && videoCount > 0
+      ? Math.round(budget / videoCount)
       : null
 
   return (
@@ -218,7 +221,7 @@ export default function PilotCard({
         </div>
       )}
 
-      {/* Admin: budget */}
+      {/* Admin: budget + cost/video (UGC only) */}
       {isAdmin && (
         <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between">
@@ -239,22 +242,22 @@ export default function PilotCard({
                 {budget ? formatInr(budget) : 'TBD'}
               </span>
             </div>
-            {budget && (
+            {isUgc && budget && (
               <div className="text-right">
                 <span
                   className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
                   style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
                 >
-                  Cost / qualified
+                  Cost / video
                 </span>
                 <span
                   className="text-[16px] font-semibold"
                   style={{
                     fontFamily: 'var(--font-poppins)',
-                    color: costPerQualified ? 'var(--text-primary)' : 'var(--text-muted)',
+                    color: costPerVideo ? 'var(--text-primary)' : 'var(--text-muted)',
                   }}
                 >
-                  {costPerQualified ? formatInr(costPerQualified) : '—'}
+                  {costPerVideo ? formatInr(costPerVideo) : '—'}
                 </span>
               </div>
             )}

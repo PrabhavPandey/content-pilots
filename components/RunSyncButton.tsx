@@ -38,7 +38,7 @@ export default function RunSyncButton() {
     <button
       onClick={handleClick}
       disabled={state === 'running'}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold tracking-[0.12em] uppercase transition-all"
+      className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold tracking-[0.06em] uppercase transition-all"
       style={{
         fontFamily: 'var(--font-inconsolata)',
         color: '#fff',
@@ -46,6 +46,7 @@ export default function RunSyncButton() {
         border: 'none',
         opacity: state === 'running' ? 0.65 : 1,
         cursor: state === 'running' ? 'not-allowed' : 'pointer',
+        lineHeight: '1.6',
       }}
     >
       {state === 'running' && (

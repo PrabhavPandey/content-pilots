@@ -19,8 +19,12 @@ export default async function DashboardPage() {
   const pilotId = session.user.pilotId ?? undefined
   const metrics = await getLatestMetrics(isAdmin ? undefined : pilotId)
 
-  // Admin-only: fetch onboarded installer records
-  const installsMap = isAdmin ? await getAllPilotInstalls() : new Map()
+  // Fetch installs: all pilots for admin, scoped to this pilot for agency
+  const installsMap = isAdmin
+    ? await getAllPilotInstalls()
+    : pilotId
+      ? await getAllPilotInstalls(pilotId)
+      : new Map()
 
   const latestSync = metrics.find(m => m.fetched_at)?.fetched_at ?? null
   const influencers = metrics.filter(m => m.pilot.type === 'influencer')
@@ -77,7 +81,7 @@ export default async function DashboardPage() {
                   const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
                   return (
                     <div key={m.pilot_id}>
-                      <PilotCard metrics={m} isAdmin budget={meta?.budget} index={i} />
+                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} index={i} />
                       <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
                     </div>
                   )
@@ -98,7 +102,7 @@ export default async function DashboardPage() {
                   const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
                   return (
                     <div key={m.pilot_id}>
-                      <PilotCard metrics={m} isAdmin budget={meta?.budget} index={i} />
+                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} index={i} />
                       <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
                     </div>
                   )
@@ -114,13 +118,18 @@ export default async function DashboardPage() {
             {metrics.map((m, i) => {
               const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
               return (
-                <PilotCard
-                  key={m.pilot_id}
-                  metrics={m}
-                  isAdmin={false}
-                  linkrunnerUrl={meta?.linkrunnerUrl}
-                  index={i}
-                />
+                <div key={m.pilot_id}>
+                  <PilotCard
+                    metrics={m}
+                    isAdmin={false}
+                    linkrunnerUrl={meta?.linkrunnerUrl}
+                    index={i}
+                  />
+                  <InstallerTable
+                    installs={installsMap.get(m.pilot_id) ?? []}
+                    showPhone={false}
+                  />
+                </div>
               )
             })}
           </div>

@@ -44,7 +44,7 @@ function formatDate(raw: string | null | undefined): string {
   }
 }
 
-function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: () => void }) {
+function DetailPopover({ install, onClose, showPhone }: { install: PilotInstall; onClose: () => void; showPhone: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
 
   const linkedinUrl = install.linkedin
@@ -101,7 +101,7 @@ function DetailPopover({ install, onClose }: { install: PilotInstall; onClose: (
         <PopRow label="Role"         value={install.job_role ?? '—'} />
         <PopRow label="City"         value={install.city ?? '—'} />
         <PopRow label="Onboarded"    value={formatDate(install.onboarded_at)} />
-        <PopRow label="Phone"        value={install.phone ?? '—'} />
+        {showPhone && <PopRow label="Phone" value={install.phone ?? '—'} />}
         <PopRow label="City qual"    value={<QualBadge ok={install.is_city_qualified} />} />
         <PopRow label="Company qual" value={<QualBadge ok={install.is_company_qualified} />} />
         {install.gemini_reason && (
@@ -161,7 +161,7 @@ const COLS: { key: SortField; label: string }[] = [
   { key: 'onboarded_at', label: 'Date'      },
 ]
 
-export default function InstallerTable({ installs }: { installs: PilotInstall[] }) {
+export default function InstallerTable({ installs, showPhone = true }: { installs: PilotInstall[]; showPhone?: boolean }) {
   const [open,      setOpen]      = useState(false)
   const [search,    setSearch]    = useState('')
   const [sortField, setSortField] = useState<SortField>('is_qualified')
@@ -293,7 +293,7 @@ export default function InstallerTable({ installs }: { installs: PilotInstall[] 
         </div>
       )}
 
-      {selected && <DetailPopover install={selected} onClose={() => setSelected(null)} />}
+      {selected && <DetailPopover install={selected} onClose={() => setSelected(null)} showPhone={showPhone} />}
     </div>
   )
 }
