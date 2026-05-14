@@ -5,7 +5,6 @@ import { getPilotMeta } from '@/lib/pilot-config'
 import PilotCard from '@/components/PilotCard'
 import InstallerTable from '@/components/InstallerTable'
 import SyncBadge from '@/components/SyncBadge'
-import QualificationCarousel from '@/components/QualificationCarousel'
 import CumulativeSummary from '@/components/CumulativeSummary'
 import RunSyncButton from '@/components/RunSyncButton'
 
@@ -113,7 +112,6 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div>
-          <QualificationCarousel />
           <div className="space-y-4">
             {metrics.map((m, i) => {
               const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)

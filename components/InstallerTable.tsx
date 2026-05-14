@@ -142,11 +142,11 @@ function DetailPopover({ install, onClose, showPhone }: { install: PilotInstall;
 
 function PopRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[13px] font-semibold tracking-[0.1em] uppercase" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-[13px] font-semibold tracking-[0.1em] uppercase shrink-0" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-inconsolata)' }}>
         {label}
       </span>
-      <span className="text-[15px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
+      <span className="text-[15px] text-right" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-inconsolata)' }}>
         {value}
       </span>
     </div>
