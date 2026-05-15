@@ -15,7 +15,6 @@ import { getAllCampaignStats } from '@/lib/linkrunner'
 import { getAllCampaignInstalls } from '@/lib/mixpanel'
 import { getOnboardedUsers } from '@/lib/metabase'
 import { isCityQualified, batchClassifyUsers, buildCacheKey, type CacheEntry } from '@/lib/gemini'
-import { fetchSheetViews } from '@/lib/sheets'
 
 export async function GET(req: NextRequest) {
   const secret =
@@ -156,11 +155,6 @@ export async function GET(req: NextRequest) {
 
     console.log(`${pilot.name} [${pilotType}]: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}`)
 
-    // Fetch views from Google Sheet if configured
-    const sheetsResult = pilot.sheets_url
-      ? await fetchSheetViews(pilot.sheets_url).catch(() => ({ total: 0 }))
-      : { total: 0 }
-
     const { error: metricsError } = await db.from('pilot_metrics').insert({
       pilot_id:           pilot.id,
       fetched_at:         syncedAt,
@@ -173,7 +167,6 @@ export async function GET(req: NextRequest) {
       lr_retention_d7:    0,
       mp_first_app_opens: mpData.first_app_opens,
       qualified_installs: qualifiedInstalls,
-      total_views:        sheetsResult.total,
     })
     if (metricsError) throw metricsError
 

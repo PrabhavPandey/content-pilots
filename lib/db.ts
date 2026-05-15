@@ -22,7 +22,6 @@ export type Pilot = {
   type: 'influencer' | 'ugc'
   linkrunner_campaign_name: string
   active: boolean
-  sheets_url: string | null
 }
 
 export type PilotMetrics = {
@@ -38,7 +37,6 @@ export type PilotMetrics = {
   lr_retention_d7: number
   mp_first_app_opens: number
   qualified_installs: number
-  total_views: number
   click_to_install_rate: number
   install_to_qualified_rate: number
 }

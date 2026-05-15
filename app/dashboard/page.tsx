@@ -80,7 +80,7 @@ export default async function DashboardPage() {
                   const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
                   return (
                     <div key={m.pilot_id}>
-                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} index={i} />
+                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} views={meta?.views} index={i} />
                       <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
                     </div>
                   )
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
                   const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
                   return (
                     <div key={m.pilot_id}>
-                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} index={i} />
+                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} views={meta?.views} index={i} />
                       <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
                     </div>
                   )

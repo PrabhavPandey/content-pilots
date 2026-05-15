@@ -2,6 +2,7 @@ export type PilotMeta = {
   linkrunnerUrl: string
   budget?: number      // INR, no paise
   videoCount?: number  // UGC pilots only
+  views?: number       // total views generated — updated manually from agency screenshots
 }
 
 export const PILOT_META: Record<string, PilotMeta> = {

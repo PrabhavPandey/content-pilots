@@ -7,6 +7,7 @@ type Props = {
   isAdmin?: boolean
   budget?: number
   videoCount?: number
+  views?: number
   linkrunnerUrl?: string
   index?: number
 }
@@ -37,6 +38,7 @@ export default function PilotCard({
   isAdmin = false,
   budget,
   videoCount,
+  views,
   linkrunnerUrl,
   index = 0,
 }: Props) {
@@ -211,7 +213,7 @@ export default function PilotCard({
       )}
 
       {/* Admin: views (when available) */}
-      {isAdmin && m.total_views > 0 && (
+      {isAdmin && views && views > 0 ? (
         <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
           <span
             className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
@@ -223,10 +225,10 @@ export default function PilotCard({
             className="text-[16px] font-semibold"
             style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
           >
-            {m.total_views.toLocaleString('en-IN')}
+            {views.toLocaleString('en-IN')}
           </span>
         </div>
-      )}
+      ) : null}
 
       {/* Admin: budget + cost/video (UGC only) */}
       {isAdmin && (

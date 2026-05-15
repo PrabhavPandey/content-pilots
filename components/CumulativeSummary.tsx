@@ -168,7 +168,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
   const totalClicks   = filtered.reduce((s, m) => s + (m.lr_clicks   ?? 0), 0)
   const totalInstalls = filtered.reduce((s, m) => s + (m.lr_installs ?? 0), 0)
   const totalSignups  = filtered.reduce((s, m) => s + (m.lr_signups  ?? 0), 0)
-  const totalViews    = filtered.reduce((s, m) => s + ((m as any).total_views ?? 0), 0)
+  const totalViews    = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.views ?? 0), 0)
 
   const filteredIds = new Set(filtered.map(m => m.pilot_id))
 
