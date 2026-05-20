@@ -232,10 +232,10 @@ export default function PilotCard({
         </div>
       ) : null}
 
-      {/* Admin: budget + cost/video (UGC only) */}
+      {/* Admin: budget + efficiency metrics */}
       {isAdmin && !hideFinancials && (
         <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <span
                 className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
@@ -253,7 +253,7 @@ export default function PilotCard({
                 {budget ? formatInr(budget) : 'TBD'}
               </span>
             </div>
-            {isUgc && budget && (
+            {isUgc && costPerVideo && (
               <div className="text-right">
                 <span
                   className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
@@ -263,12 +263,25 @@ export default function PilotCard({
                 </span>
                 <span
                   className="text-[16px] font-semibold"
-                  style={{
-                    fontFamily: 'var(--font-poppins)',
-                    color: costPerVideo ? 'var(--text-primary)' : 'var(--text-muted)',
-                  }}
+                  style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
                 >
-                  {costPerVideo ? formatInr(costPerVideo) : '—'}
+                  {formatInr(costPerVideo)}
+                </span>
+              </div>
+            )}
+            {budget && m.qualified_installs > 0 && (
+              <div className="text-right">
+                <span
+                  className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
+                  style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+                >
+                  Cost / qualified
+                </span>
+                <span
+                  className="text-[16px] font-semibold"
+                  style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
+                >
+                  {formatInr(Math.round(budget / m.qualified_installs))}
                 </span>
               </div>
             )}

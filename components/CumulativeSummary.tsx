@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { MetricsWithPilot, PilotInstall } from '@/lib/db'
-import { PILOT_META, formatInr } from '@/lib/pilot-config'
+import { PILOT_META } from '@/lib/pilot-config'
 
 type Props = {
   metrics: MetricsWithPilot[]
@@ -260,7 +260,6 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
   const totalClicks   = filtered.reduce((s, m) => s + (m.lr_clicks   ?? 0), 0)
   const totalInstalls = filtered.reduce((s, m) => s + (m.lr_installs ?? 0), 0)
   const totalSignups  = filtered.reduce((s, m) => s + (m.lr_signups  ?? 0), 0)
-  const totalBudget   = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.budget ?? 0), 0)
   const totalViews    = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.views ?? 0), 0)
 
   const filteredIds = new Set(filtered.map(m => m.pilot_id))
@@ -284,9 +283,7 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installsMap, filteredIds.size, dateFrom, dateTo])
 
-  const daysRunning    = getDaysRunning()
-  const costPerView    = totalViews > 0 && totalBudget > 0 ? totalBudget / totalViews : null
-  const costPerQual    = totalQualified > 0 && totalBudget > 0 ? Math.round(totalBudget / totalQualified) : null
+  const daysRunning = getDaysRunning()
 
   const funnelSteps: FunnelStep[] = [
     { label: 'Clicks',    value: totalClicks,    color: '#E7E3DE' },
@@ -384,49 +381,6 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
         />
       </div>
 
-      {/* ── Efficiency pills (financials visible only) ──────────────────── */}
-      {!hideFinancials && (costPerView !== null || costPerQual !== null) && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {costPerView !== null && (
-            <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: '#F0EDE8' }}
-            >
-              <span
-                className="text-[12px] font-semibold"
-                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-primary)' }}
-              >
-                {formatInr(Math.round(costPerView * 100) / 100)}
-              </span>
-              <span
-                className="text-[11px] font-semibold tracking-[0.08em] uppercase"
-                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-              >
-                / view
-              </span>
-            </div>
-          )}
-          {costPerQual !== null && (
-            <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: '#F0EDE8' }}
-            >
-              <span
-                className="text-[12px] font-semibold"
-                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-primary)' }}
-              >
-                {formatInr(costPerQual)}
-              </span>
-              <span
-                className="text-[11px] font-semibold tracking-[0.08em] uppercase"
-                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-              >
-                / qualified install
-              </span>
-            </div>
-          )}
-        </div>
-      )}
 
       <Funnel steps={funnelSteps} />
     </div>
