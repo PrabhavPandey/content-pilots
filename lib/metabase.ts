@@ -49,7 +49,7 @@ export async function getOnboardedUsers(normalizedPhones: string[]): Promise<Met
     LEFT JOIN tal.user_linkedin_data ld ON ld.user_phone = u.phone
     WHERE RIGHT(u.phone::text, 10) IN (${phoneList})
       AND u.created_at >= '${PILOT_START_DATE}'
-    LIMIT 2000
+    LIMIT 10000
   `
 
   try {
