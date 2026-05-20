@@ -11,17 +11,21 @@ type Props = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function Stat({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+function Stat({ label, value, muted, large }: { label: string; value: string; muted?: boolean; large?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <span
-        className="text-[24px] font-semibold leading-none tabular-nums"
-        style={{ fontFamily: 'var(--font-poppins)', color: muted ? 'var(--text-muted)' : 'var(--text-primary)' }}
+        className="font-semibold leading-none tabular-nums"
+        style={{
+          fontFamily: 'var(--font-poppins)',
+          color: muted ? 'var(--text-muted)' : 'var(--text-primary)',
+          fontSize: large ? '30px' : '26px',
+        }}
       >
         {value}
       </span>
       <span
-        className="text-[10px] font-semibold tracking-[0.15em] uppercase"
+        className="text-[12px] font-semibold tracking-[0.15em] uppercase"
         style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
       >
         {label}
@@ -47,18 +51,18 @@ function Funnel({ steps }: { steps: FunnelStep[] }) {
         return (
           <div key={step.label} className="flex items-center gap-3">
             <div
-              className="w-[72px] text-right text-[9px] font-semibold tracking-[0.1em] uppercase shrink-0"
+              className="w-[80px] text-right text-[11px] font-semibold tracking-[0.1em] uppercase shrink-0"
               style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
             >
               {step.label}
             </div>
-            <div className="flex-1 relative h-6 flex items-center">
+            <div className="flex-1 relative h-7 flex items-center">
               <div
-                className="h-full rounded flex items-center px-2.5 transition-all duration-500"
-                style={{ width: `${widthPct}%`, background: step.color, minWidth: 36 }}
+                className="h-full rounded flex items-center px-3 transition-all duration-500"
+                style={{ width: `${widthPct}%`, background: step.color, minWidth: 40 }}
               >
                 <span
-                  className="text-[10px] font-semibold whitespace-nowrap"
+                  className="text-[12px] font-semibold whitespace-nowrap"
                   style={{
                     fontFamily: 'var(--font-inconsolata)',
                     color: i === steps.length - 1 ? '#fff' : 'var(--text-primary)',
@@ -69,7 +73,7 @@ function Funnel({ steps }: { steps: FunnelStep[] }) {
               </div>
               {conv && (
                 <span
-                  className="ml-2 text-[9px]"
+                  className="ml-2 text-[11px]"
                   style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
                 >
                   {conv}
@@ -88,7 +92,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   return (
     <button
       onClick={onClick}
-      className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-[0.08em] uppercase transition-all"
+      className="px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.08em] uppercase transition-all"
       style={{
         fontFamily: 'var(--font-inconsolata)',
         background: active ? '#1A1A1A' : 'transparent',
@@ -110,7 +114,7 @@ function DateInput({ label, value, onChange }: { label: string; value: string; o
       style={{ border: '1px solid var(--border)', background: 'transparent' }}
     >
       <span
-        className="text-[9px] font-semibold tracking-[0.1em] uppercase"
+        className="text-[11px] font-semibold tracking-[0.1em] uppercase"
         style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
       >
         {label}
@@ -119,7 +123,7 @@ function DateInput({ label, value, onChange }: { label: string; value: string; o
         type="date"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="outline-none bg-transparent text-[10px] font-medium"
+        className="outline-none bg-transparent text-[12px] font-medium"
         style={{
           fontFamily: 'var(--font-inconsolata)',
           color: value ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -207,7 +211,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
       {/* ── Top bar: label + clear ──────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-5">
         <p
-          className="text-[9px] font-semibold tracking-[0.22em] uppercase"
+          className="text-[11px] font-semibold tracking-[0.22em] uppercase"
           style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
         >
           All Pilots · Combined
@@ -215,7 +219,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
         {hasFilter && (
           <button
             onClick={clearAll}
-            className="text-[10px] font-semibold tracking-[0.06em] uppercase flex items-center gap-1"
+            className="text-[12px] font-semibold tracking-[0.06em] uppercase flex items-center gap-1"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             Clear filters <span style={{ fontSize: 13 }}>×</span>
@@ -228,7 +232,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
         {/* Row 1: type + agency */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span
-            className="text-[9px] font-semibold tracking-[0.12em] uppercase mr-1 w-12 shrink-0"
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase mr-1 w-14 shrink-0"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Type
@@ -238,7 +242,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <span
-            className="text-[9px] font-semibold tracking-[0.12em] uppercase mr-1 w-12 shrink-0"
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase mr-1 w-14 shrink-0"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Agency
@@ -250,7 +254,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
         {/* Row 3: date range */}
         <div className="flex items-center gap-2">
           <span
-            className="text-[9px] font-semibold tracking-[0.12em] uppercase mr-1 w-12 shrink-0"
+            className="text-[11px] font-semibold tracking-[0.12em] uppercase mr-1 w-14 shrink-0"
             style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
           >
             Date
@@ -263,17 +267,27 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
       {/* Divider */}
       <div className="mb-6" style={{ height: 1, background: 'var(--border)' }} />
 
-      {/* ── Stats row ──────────────────────────────────────────────────── */}
+      {/* ── Budget row (own line) ───────────────────────────────────────── */}
+      {totalBudget > 0 && (
+        <>
+          <div className="flex items-start gap-8 flex-wrap mb-5">
+            <Stat label="Budget Spent" value={formatInr(totalBudget)} large />
+            {totalViews > 0 && (
+              <>
+                <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
+                <Stat label="Views Generated" value={totalViews.toLocaleString('en-IN')} large />
+              </>
+            )}
+          </div>
+          <div className="mb-5" style={{ height: 1, background: 'var(--border)' }} />
+        </>
+      )}
+
+      {/* ── Funnel metrics row ──────────────────────────────────────────── */}
       <div className="flex items-start gap-8 flex-wrap">
-        {totalBudget > 0 && (
+        {totalBudget === 0 && totalViews > 0 && (
           <>
-            <Stat label="Budget" value={formatInr(totalBudget)} />
-            <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-          </>
-        )}
-        {totalViews > 0 && (
-          <>
-            <Stat label="Views" value={totalViews.toLocaleString('en-IN')} />
+            <Stat label="Views Generated" value={totalViews.toLocaleString('en-IN')} />
             <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
           </>
         )}

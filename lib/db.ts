@@ -133,21 +133,32 @@ export async function getLatestMetrics(pilotId?: string): Promise<MetricsWithPil
 
 // Fetch onboarded installs. Pass pilotId to scope to one pilot (agency view).
 // Returns a map of pilot_id → installs array.
+// Paginates in chunks of 1000 to bypass PostgREST default max_rows=1000.
 export async function getAllPilotInstalls(pilotId?: string): Promise<Map<string, PilotInstall[]>> {
   const db = getServiceClient()
-  let q = db
-    .from('pilot_installs')
-    .select('*')
-    .order('is_qualified', { ascending: false })
-    .order('name', { ascending: true })
-    .limit(10000)
+  const all: PilotInstall[] = []
+  const PAGE = 1000
+  let from = 0
 
-  if (pilotId) q = q.eq('pilot_id', pilotId)
+  while (true) {
+    let q = db
+      .from('pilot_installs')
+      .select('*')
+      .order('is_qualified', { ascending: false })
+      .order('name', { ascending: true })
+      .range(from, from + PAGE - 1)
 
-  const { data } = await q
+    if (pilotId) q = q.eq('pilot_id', pilotId)
+
+    const { data, error } = await q
+    if (error || !data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
 
   const map = new Map<string, PilotInstall[]>()
-  for (const row of data ?? []) {
+  for (const row of all) {
     if (!map.has(row.pilot_id)) map.set(row.pilot_id, [])
     map.get(row.pilot_id)!.push(row)
   }
