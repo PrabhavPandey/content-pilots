@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { MetricsWithPilot, PilotInstall } from '@/lib/db'
-import { PILOT_META } from '@/lib/pilot-config'
+import { PILOT_META, formatInr } from '@/lib/pilot-config'
 
 type Props = {
   metrics: MetricsWithPilot[]
@@ -10,23 +10,46 @@ type Props = {
   hideFinancials?: boolean
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const PILOT_START = new Date('2026-05-06')
+
+function getDaysRunning(): number {
+  return Math.floor((Date.now() - PILOT_START.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function compactViews(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`
+  return n.toLocaleString('en-IN')
+}
+
+function pct(a: number, b: number) {
+  if (!b) return null
+  return ((a / b) * 100).toFixed(1) + '%'
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({
   label,
   value,
+  sub,
   accent,
+  wide,
 }: {
   label: string
   value: string
+  sub?: string
   accent?: boolean
+  wide?: boolean
 }) {
   return (
     <div
       className="flex flex-col gap-1.5 px-4 py-3 rounded-xl"
       style={{
         background: accent ? '#059669' : '#F0EDE8',
-        flex: '1 1 0',
+        flex: wide ? '2 1 0' : '1 1 0',
         minWidth: 90,
       }}
     >
@@ -48,13 +71,63 @@ function StatCard({
       >
         {label}
       </span>
+      {sub && (
+        <span
+          className="text-[11px] font-semibold"
+          style={{
+            fontFamily: 'var(--font-inconsolata)',
+            color: accent ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
+          }}
+        >
+          {sub}
+        </span>
+      )}
     </div>
   )
 }
 
-function pct(a: number, b: number) {
-  if (!b) return null
-  return ((a / b) * 100).toFixed(1) + '%'
+// Views headline with compact/exact toggle
+function ViewsHero({ total }: { total: number }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className="mb-5">
+      <div className="flex items-baseline gap-3 flex-wrap">
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="flex items-baseline gap-2 group"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <span
+            className="font-semibold leading-none tabular-nums transition-all"
+            style={{
+              fontFamily: 'var(--font-poppins)',
+              color: 'var(--text-primary)',
+              fontSize: expanded ? '26px' : '38px',
+            }}
+          >
+            {expanded ? total.toLocaleString('en-IN') : compactViews(total)}
+          </span>
+          <span
+            className="text-[11px] font-semibold tracking-[0.1em] uppercase transition-opacity"
+            style={{
+              fontFamily: 'var(--font-inconsolata)',
+              color: 'var(--text-muted)',
+              opacity: 0.6,
+            }}
+          >
+            {expanded ? '↙ collapse' : '↗ exact'}
+          </span>
+        </button>
+        <span
+          className="text-[11px] font-semibold tracking-[0.15em] uppercase self-center"
+          style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+        >
+          Views Generated
+        </span>
+      </div>
+      <div className="mt-5" style={{ height: 1, background: 'var(--border)' }} />
+    </div>
+  )
 }
 
 type FunnelStep = { label: string; value: number; color: string }
@@ -105,7 +178,6 @@ function Funnel({ steps }: { steps: FunnelStep[] }) {
   )
 }
 
-// Toggle chip
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
@@ -188,6 +260,7 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
   const totalClicks   = filtered.reduce((s, m) => s + (m.lr_clicks   ?? 0), 0)
   const totalInstalls = filtered.reduce((s, m) => s + (m.lr_installs ?? 0), 0)
   const totalSignups  = filtered.reduce((s, m) => s + (m.lr_signups  ?? 0), 0)
+  const totalBudget   = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.budget ?? 0), 0)
   const totalViews    = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.views ?? 0), 0)
 
   const filteredIds = new Set(filtered.map(m => m.pilot_id))
@@ -211,6 +284,10 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installsMap, filteredIds.size, dateFrom, dateTo])
 
+  const daysRunning    = getDaysRunning()
+  const costPerView    = totalViews > 0 && totalBudget > 0 ? totalBudget / totalViews : null
+  const costPerQual    = totalQualified > 0 && totalBudget > 0 ? Math.round(totalBudget / totalQualified) : null
+
   const funnelSteps: FunnelStep[] = [
     { label: 'Clicks',    value: totalClicks,    color: '#E7E3DE' },
     { label: 'Installs',  value: totalInstalls,  color: '#D9D3CB' },
@@ -225,7 +302,7 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
       style={{ background: '#FAFAF9', border: '1px solid var(--border)' }}
     >
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-1">
         <p
           className="text-[11px] font-semibold tracking-[0.22em] uppercase"
           style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
@@ -242,6 +319,14 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
           </button>
         )}
       </div>
+
+      {/* Campaign context line */}
+      <p
+        className="text-[11px] mb-5"
+        style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+      >
+        Day {daysRunning} · {filtered.length} campaign{filtered.length !== 1 ? 's' : ''} · since May 6, 2026
+      </p>
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
       <div className="space-y-2.5 mb-6">
@@ -281,33 +366,67 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
       {/* Divider */}
       <div className="mb-5" style={{ height: 1, background: 'var(--border)' }} />
 
-      {/* ── Views headline (when available + not hidden) ────────────────── */}
-      {!hideFinancials && totalViews > 0 && (
-        <div className="mb-5">
-          <span
-            className="text-[11px] font-semibold tracking-[0.15em] uppercase block mb-1"
-            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-          >
-            Views Generated
-          </span>
-          <span
-            className="text-[30px] font-semibold tabular-nums leading-none"
-            style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
-          >
-            {totalViews.toLocaleString('en-IN')}
-          </span>
-          <div className="mt-5 mb-0" style={{ height: 1, background: 'var(--border)' }} />
-        </div>
-      )}
+      {/* ── Views hero ─────────────────────────────────────────────────── */}
+      {totalViews > 0 && <ViewsHero total={totalViews} />}
 
-      {/* ── Stat cards row ─────────────────────────────────────────────── */}
+      {/* ── Stat cards ─────────────────────────────────────────────────── */}
       <div className="flex gap-2 flex-wrap mt-4">
         <StatCard label="Clicks"    value={totalClicks.toLocaleString('en-IN')} />
         <StatCard label="Installs"  value={totalInstalls.toLocaleString('en-IN')} />
         <StatCard label="Sign-ups"  value={totalSignups.toLocaleString('en-IN')} />
         <StatCard label="Onboarded" value={totalOnboarded.toLocaleString('en-IN')} />
-        <StatCard label="Qualified" value={totalQualified.toLocaleString('en-IN')} accent />
+        <StatCard
+          label="Qualified"
+          value={totalQualified.toLocaleString('en-IN')}
+          sub={totalInstalls > 0 ? `${pct(totalQualified, totalInstalls)} of installs` : undefined}
+          accent
+          wide
+        />
       </div>
+
+      {/* ── Efficiency pills (financials visible only) ──────────────────── */}
+      {!hideFinancials && (costPerView !== null || costPerQual !== null) && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {costPerView !== null && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ background: '#F0EDE8' }}
+            >
+              <span
+                className="text-[12px] font-semibold"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-primary)' }}
+              >
+                {formatInr(Math.round(costPerView * 100) / 100)}
+              </span>
+              <span
+                className="text-[11px] font-semibold tracking-[0.08em] uppercase"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+              >
+                / view
+              </span>
+            </div>
+          )}
+          {costPerQual !== null && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ background: '#F0EDE8' }}
+            >
+              <span
+                className="text-[12px] font-semibold"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-primary)' }}
+              >
+                {formatInr(costPerQual)}
+              </span>
+              <span
+                className="text-[11px] font-semibold tracking-[0.08em] uppercase"
+                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+              >
+                / qualified install
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <Funnel steps={funnelSteps} />
     </div>
