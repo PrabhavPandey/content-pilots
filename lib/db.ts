@@ -140,6 +140,7 @@ export async function getAllPilotInstalls(pilotId?: string): Promise<Map<string,
     .select('*')
     .order('is_qualified', { ascending: false })
     .order('name', { ascending: true })
+    .limit(10000)
 
   if (pilotId) q = q.eq('pilot_id', pilotId)
 
