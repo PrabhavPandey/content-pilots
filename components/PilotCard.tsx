@@ -10,6 +10,7 @@ type Props = {
   views?: number
   linkrunnerUrl?: string
   index?: number
+  hideFinancials?: boolean
 }
 
 function pct(n: number) {
@@ -41,6 +42,7 @@ export default function PilotCard({
   views,
   linkrunnerUrl,
   index = 0,
+  hideFinancials = false,
 }: Props) {
   const typeLabel = TYPE_LABEL[m.pilot.type] ?? m.pilot.type.toUpperCase()
   const pill = TYPE_PILL[m.pilot.type] ?? { bg: '#F4F4F5', color: '#71717A' }
@@ -213,7 +215,7 @@ export default function PilotCard({
       )}
 
       {/* Admin: views (when available) */}
-      {isAdmin && views && views > 0 ? (
+      {isAdmin && !hideFinancials && views && views > 0 ? (
         <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
           <span
             className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
@@ -231,7 +233,7 @@ export default function PilotCard({
       ) : null}
 
       {/* Admin: budget + cost/video (UGC only) */}
-      {isAdmin && (
+      {isAdmin && !hideFinancials && (
         <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between">
             <div>

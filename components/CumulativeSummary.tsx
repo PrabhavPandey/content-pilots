@@ -2,31 +2,49 @@
 
 import { useState, useMemo } from 'react'
 import { MetricsWithPilot, PilotInstall } from '@/lib/db'
-import { PILOT_META, formatInr } from '@/lib/pilot-config'
+import { PILOT_META } from '@/lib/pilot-config'
 
 type Props = {
   metrics: MetricsWithPilot[]
   installsMap: Map<string, PilotInstall[]>
+  hideFinancials?: boolean
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function Stat({ label, value, muted, large }: { label: string; value: string; muted?: boolean; large?: boolean }) {
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+}) {
   return (
-    <div className="flex flex-col gap-1">
+    <div
+      className="flex flex-col gap-1.5 px-4 py-3 rounded-xl"
+      style={{
+        background: accent ? '#059669' : '#F0EDE8',
+        flex: '1 1 0',
+        minWidth: 90,
+      }}
+    >
       <span
-        className="font-semibold leading-none tabular-nums"
+        className="text-[26px] font-semibold leading-none tabular-nums"
         style={{
           fontFamily: 'var(--font-poppins)',
-          color: muted ? 'var(--text-muted)' : 'var(--text-primary)',
-          fontSize: large ? '30px' : '26px',
+          color: accent ? '#fff' : 'var(--text-primary)',
         }}
       >
         {value}
       </span>
       <span
-        className="text-[12px] font-semibold tracking-[0.15em] uppercase"
-        style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+        className="text-[11px] font-semibold tracking-[0.14em] uppercase"
+        style={{
+          fontFamily: 'var(--font-inconsolata)',
+          color: accent ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)',
+        }}
       >
         {label}
       </span>
@@ -44,7 +62,7 @@ type FunnelStep = { label: string; value: number; color: string }
 function Funnel({ steps }: { steps: FunnelStep[] }) {
   const max = steps[0]?.value || 1
   return (
-    <div className="mt-7 space-y-2">
+    <div className="mt-6 space-y-2">
       {steps.map((step, i) => {
         const widthPct = Math.max((step.value / max) * 100, 2)
         const conv = i > 0 ? pct(step.value, steps[i - 1].value) : null
@@ -87,7 +105,7 @@ function Funnel({ steps }: { steps: FunnelStep[] }) {
   )
 }
 
-// Toggle chip — minimal, no heavy outline
+// Toggle chip
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
@@ -106,7 +124,6 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   )
 }
 
-// Clean date input — hides the ugly browser chrome
 function DateInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div
@@ -146,7 +163,7 @@ function DateInput({ label, value, onChange }: { label: string; value: string; o
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function CumulativeSummary({ metrics, installsMap }: Props) {
+export default function CumulativeSummary({ metrics, installsMap, hideFinancials = false }: Props) {
   const pilotNames = useMemo(() => metrics.map(m => m.pilot.name), [metrics])
 
   const [agencies, setAgencies] = useState<string[]>([])
@@ -168,7 +185,6 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
     }),
   [metrics, agencies, types])
 
-  const totalBudget   = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.budget ?? 0), 0)
   const totalClicks   = filtered.reduce((s, m) => s + (m.lr_clicks   ?? 0), 0)
   const totalInstalls = filtered.reduce((s, m) => s + (m.lr_installs ?? 0), 0)
   const totalSignups  = filtered.reduce((s, m) => s + (m.lr_signups  ?? 0), 0)
@@ -208,7 +224,7 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
       className="rounded-2xl p-6 mb-8"
       style={{ background: '#FAFAF9', border: '1px solid var(--border)' }}
     >
-      {/* ── Top bar: label + clear ──────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-5">
         <p
           className="text-[11px] font-semibold tracking-[0.22em] uppercase"
@@ -229,7 +245,6 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
       <div className="space-y-2.5 mb-6">
-        {/* Row 1: type + agency */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span
             className="text-[11px] font-semibold tracking-[0.12em] uppercase mr-1 w-14 shrink-0"
@@ -251,7 +266,6 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
             <Chip key={name} label={name} active={agencies.includes(name)} onClick={() => toggleAgency(name)} />
           ))}
         </div>
-        {/* Row 3: date range */}
         <div className="flex items-center gap-2">
           <span
             className="text-[11px] font-semibold tracking-[0.12em] uppercase mr-1 w-14 shrink-0"
@@ -265,41 +279,34 @@ export default function CumulativeSummary({ metrics, installsMap }: Props) {
       </div>
 
       {/* Divider */}
-      <div className="mb-6" style={{ height: 1, background: 'var(--border)' }} />
+      <div className="mb-5" style={{ height: 1, background: 'var(--border)' }} />
 
-      {/* ── Budget row (own line) ───────────────────────────────────────── */}
-      {totalBudget > 0 && (
-        <>
-          <div className="flex items-start gap-8 flex-wrap mb-5">
-            <Stat label="Budget Spent" value={formatInr(totalBudget)} large />
-            {totalViews > 0 && (
-              <>
-                <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-                <Stat label="Views Generated" value={totalViews.toLocaleString('en-IN')} large />
-              </>
-            )}
-          </div>
-          <div className="mb-5" style={{ height: 1, background: 'var(--border)' }} />
-        </>
+      {/* ── Views headline (when available + not hidden) ────────────────── */}
+      {!hideFinancials && totalViews > 0 && (
+        <div className="mb-5">
+          <span
+            className="text-[11px] font-semibold tracking-[0.15em] uppercase block mb-1"
+            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+          >
+            Views Generated
+          </span>
+          <span
+            className="text-[30px] font-semibold tabular-nums leading-none"
+            style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
+          >
+            {totalViews.toLocaleString('en-IN')}
+          </span>
+          <div className="mt-5 mb-0" style={{ height: 1, background: 'var(--border)' }} />
+        </div>
       )}
 
-      {/* ── Funnel metrics row ──────────────────────────────────────────── */}
-      <div className="flex items-start gap-8 flex-wrap">
-        {totalBudget === 0 && totalViews > 0 && (
-          <>
-            <Stat label="Views Generated" value={totalViews.toLocaleString('en-IN')} />
-            <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-          </>
-        )}
-        <Stat label="Clicks"    value={totalClicks.toLocaleString('en-IN')} />
-        <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-        <Stat label="Installs"  value={totalInstalls.toLocaleString('en-IN')} />
-        <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-        <Stat label="Sign-ups"  value={totalSignups.toLocaleString('en-IN')} />
-        <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-        <Stat label="Onboarded" value={totalOnboarded.toLocaleString('en-IN')} />
-        <div className="w-px self-stretch" style={{ background: 'var(--border)' }} />
-        <Stat label="Qualified" value={totalQualified.toLocaleString('en-IN')} />
+      {/* ── Stat cards row ─────────────────────────────────────────────── */}
+      <div className="flex gap-2 flex-wrap mt-4">
+        <StatCard label="Clicks"    value={totalClicks.toLocaleString('en-IN')} />
+        <StatCard label="Installs"  value={totalInstalls.toLocaleString('en-IN')} />
+        <StatCard label="Sign-ups"  value={totalSignups.toLocaleString('en-IN')} />
+        <StatCard label="Onboarded" value={totalOnboarded.toLocaleString('en-IN')} />
+        <StatCard label="Qualified" value={totalQualified.toLocaleString('en-IN')} accent />
       </div>
 
       <Funnel steps={funnelSteps} />

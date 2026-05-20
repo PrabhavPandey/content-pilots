@@ -5,7 +5,7 @@ import { getPilotMeta } from '@/lib/pilot-config'
 import PilotCard from '@/components/PilotCard'
 import InstallerTable from '@/components/InstallerTable'
 import SyncBadge from '@/components/SyncBadge'
-import CumulativeSummary from '@/components/CumulativeSummary'
+import DashboardAdminView from '@/components/DashboardAdminView'
 import RunSyncButton from '@/components/RunSyncButton'
 
 export const dynamic = 'force-dynamic'
@@ -26,9 +26,7 @@ export default async function DashboardPage() {
       : new Map()
 
   const latestSync = metrics.find(m => m.fetched_at)?.fetched_at ?? null
-  const influencers = metrics.filter(m => m.pilot.type === 'influencer')
-  const ugc         = metrics.filter(m => m.pilot.type === 'ugc')
-  const monthYear   = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const monthYear  = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   return (
     <div className="fade-up">
@@ -65,51 +63,7 @@ export default async function DashboardPage() {
           No data yet — trigger a sync to populate metrics.
         </div>
       ) : isAdmin ? (
-        <div className="space-y-10">
-          <CumulativeSummary metrics={metrics} installsMap={installsMap} />
-          {influencers.length > 0 && (
-            <section>
-              <p
-                className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-4"
-                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-              >
-                Influencer
-              </p>
-              <div className="flex flex-col gap-4">
-                {influencers.map((m, i) => {
-                  const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
-                  return (
-                    <div key={m.pilot_id}>
-                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} views={meta?.views} index={i} />
-                      <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          )}
-          {ugc.length > 0 && (
-            <section>
-              <p
-                className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-4"
-                style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-              >
-                UGC
-              </p>
-              <div className="flex flex-col gap-4">
-                {ugc.map((m, i) => {
-                  const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
-                  return (
-                    <div key={m.pilot_id}>
-                      <PilotCard metrics={m} isAdmin budget={meta?.budget} videoCount={meta?.videoCount} views={meta?.views} index={i} />
-                      <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          )}
-        </div>
+        <DashboardAdminView metrics={metrics} installsMap={installsMap} />
       ) : (
         <div>
           <div className="space-y-4">
