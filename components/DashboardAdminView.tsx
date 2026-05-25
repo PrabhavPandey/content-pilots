@@ -90,6 +90,7 @@ export default function DashboardAdminView({ metrics, installsMap }: Props) {
           <div className="flex flex-col gap-4">
             {influencers.map((m, i) => {
               const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
+              const pilotInstalls = installsMap.get(m.pilot_id) ?? []
               return (
                 <div key={m.pilot_id}>
                   <PilotCard
@@ -100,8 +101,9 @@ export default function DashboardAdminView({ metrics, installsMap }: Props) {
                     views={meta?.views}
                     index={i}
                     hideFinancials={hideFinancials}
+                    installs={pilotInstalls}
                   />
-                  <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
+                  <InstallerTable installs={pilotInstalls} />
                 </div>
               )
             })}
@@ -120,6 +122,7 @@ export default function DashboardAdminView({ metrics, installsMap }: Props) {
           <div className="flex flex-col gap-4">
             {ugc.map((m, i) => {
               const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
+              const pilotInstalls = installsMap.get(m.pilot_id) ?? []
               return (
                 <div key={m.pilot_id}>
                   <PilotCard
@@ -130,8 +133,9 @@ export default function DashboardAdminView({ metrics, installsMap }: Props) {
                     views={meta?.views}
                     index={i}
                     hideFinancials={hideFinancials}
+                    installs={pilotInstalls}
                   />
-                  <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} />
+                  <InstallerTable installs={pilotInstalls} />
                 </div>
               )
             })}

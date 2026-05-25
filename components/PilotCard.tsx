@@ -1,6 +1,7 @@
-import { MetricsWithPilot } from '@/lib/db'
+import { MetricsWithPilot, PilotInstall } from '@/lib/db'
 import { formatInr } from '@/lib/pilot-config'
 import CopyLinkBox from './CopyLinkBox'
+import InstallsChart from './InstallsChart'
 
 type Props = {
   metrics: MetricsWithPilot
@@ -11,6 +12,7 @@ type Props = {
   linkrunnerUrl?: string
   index?: number
   hideFinancials?: boolean
+  installs?: PilotInstall[]
 }
 
 function pct(n: number) {
@@ -43,6 +45,7 @@ export default function PilotCard({
   linkrunnerUrl,
   index = 0,
   hideFinancials = false,
+  installs,
 }: Props) {
   const typeLabel = TYPE_LABEL[m.pilot.type] ?? m.pilot.type.toUpperCase()
   const pill = TYPE_PILL[m.pilot.type] ?? { bg: '#F4F4F5', color: '#71717A' }
@@ -287,6 +290,11 @@ export default function PilotCard({
             )}
           </div>
         </div>
+      )}
+
+      {/* Admin: installs chart */}
+      {isAdmin && installs && installs.length > 0 && (
+        <InstallsChart installs={installs} />
       )}
 
       {/* Pilot: tracking link */}
