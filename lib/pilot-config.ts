@@ -9,7 +9,6 @@ export const PILOT_META: Record<string, PilotMeta> = {
   'eastern-monk': { linkrunnerUrl: 'https://link.tal.af/?c=osBZBZ', budget: 177000 },
   'aarchi':       { linkrunnerUrl: 'https://link.tal.af/?c=STKnPc', budget: 60000,  videoCount: 72,  views: 996899 },
   'yoursbossy':   { linkrunnerUrl: 'https://link.tal.af/?c=lbOtUm' },
-  'dot':          { linkrunnerUrl: 'https://link.tal.af/?c=LAtBdF', budget: 283200, videoCount: 75  },
   'the-other':    { linkrunnerUrl: 'https://link.tal.af/?c=glrEWM', budget: 288500 },
   'third-draft':  { linkrunnerUrl: 'https://link.tal.af/?c=wPPtfW', budget: 236000, videoCount: 120, views: 3052761 },
 }

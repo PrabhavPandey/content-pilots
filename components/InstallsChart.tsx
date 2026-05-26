@@ -91,9 +91,11 @@ export default function InstallsChart({ installs }: { installs: PilotInstall[] }
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current
     if (!svg) return
-    const rect = svg.getBoundingClientRect()
-    const x = (e.clientX - rect.left) * (SVG_W / rect.width)
-    const raw = ((x - PAD.left) / PLOT_W) * (data.length - 1)
+    const pt = svg.createSVGPoint()
+    pt.x = e.clientX
+    pt.y = e.clientY
+    const svgP = pt.matrixTransform(svg.getScreenCTM()!.inverse())
+    const raw = ((svgP.x - PAD.left) / PLOT_W) * (data.length - 1)
     setHoverIdx(Math.max(0, Math.min(data.length - 1, Math.round(raw))))
   }, [data.length])
 

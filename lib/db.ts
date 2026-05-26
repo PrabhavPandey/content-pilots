@@ -79,10 +79,14 @@ export type MetricsWithPilot = PilotMetrics & {
 export async function getLatestMetrics(pilotId?: string): Promise<MetricsWithPilot[]> {
   const db = getServiceClient()
 
+  // 'dot' is excluded from the dashboard (inactive pilot)
+  const EXCLUDED_SLUGS = ['dot']
+
   const { data: pilots } = await db
     .from('pilots')
     .select('*')
     .eq('active', true)
+    .not('linkrunner_campaign_name', 'in', `(${EXCLUDED_SLUGS.join(',')})`)
     .order('name')
 
   if (!pilots) return []
