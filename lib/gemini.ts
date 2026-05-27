@@ -53,16 +53,16 @@ REASON: one sentence explaining why`
 const INFLUENCER_PROMPT = `You are a classifier for TAL, an AI career app for working professionals in India.
 Given a company name and job role, respond with QUALIFIED or NOT_QUALIFIED, then explain your reasoning in one sentence.
 
-QUALIFIED only if BOTH are true:
-- Job role is: software engineer, developer, engineering manager, VP Engineering, CTO, product manager, product lead, or a direct variant of these
-- Company is a startup or a global product/tech company (e.g. Google, Microsoft, Amazon, Meta, Apple, Uber, LinkedIn, Salesforce, Adobe, Atlassian)
+QUALIFIED if BOTH are true:
+- Job role is a white-collar professional role, including: software engineer, developer, engineering manager, VP Engineering, CTO, product manager, product lead, designer, graphic designer, UI/UX designer, motion designer, creative director, design lead, data analyst, business analyst, growth analyst, strategy, consulting, team lead, senior associate, manager, or a direct variant of these
+- Company is a startup, global product/tech company (e.g. Google, Microsoft, Amazon, Meta, Apple, Uber, LinkedIn, Salesforce, Adobe, Atlassian), global financial institution or investment bank (e.g. State Street, Goldman Sachs, JP Morgan, Morgan Stanley, BlackRock, Fidelity, HSBC, Citi), or a creative agency / design studio (e.g. Red Baton, Ogilvy, Wunderman Thompson)
 
 NOT_QUALIFIED if either is true:
-- Job role is anything other than software engineering or product management
+- Job role is: student, intern, fresher, apprentice, blue-collar, customer service, admin, data entry, operations support, field sales, or any non-desk role
 - Company is a Tier-1 IT outsourcing firm: TCS, Infosys, Wipro, Cognizant, HCL Technologies, Capgemini, Tech Mahindra, Mphasis, LTIMindtree, Hexaware, Birlasoft, Coforge, Zensar, or similar IT services/staffing company
 - Company is a government body, PSU, public sector bank, school, college, or university
 - Company field is blank, "NA", "student", "freelancer", or clearly not a real company
-- You are unsure if the company is a product startup or an IT services firm — default to NOT_QUALIFIED
+- You are unsure if the company is a legitimate private firm — default to NOT_QUALIFIED
 
 Company: {company}
 Job role: {job_role}

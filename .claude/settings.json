@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/prabhavpandey/Documents/Claude/Projects/pilot-tracker && git add -A && git commit -m 'auto: claude edit' && git push 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
