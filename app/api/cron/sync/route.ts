@@ -128,13 +128,13 @@ export async function GET(req: NextRequest) {
       const meta = phoneToMeta.get(mpUser.phone)
       if (!meta) continue
 
-      const cityOk       = pilotType === 'influencer' ? isCityQualified(mpUser.city) : true
+      const cityOk       = isCityQualified(mpUser.city)
       const companyKey   = meta.company?.toLowerCase().trim() ?? ''
       const cacheKey     = buildCacheKey(companyKey, meta.job_role, pilotType)
       const entry        = companyKey ? classMap.get(cacheKey) : undefined
       const companyOk    = entry?.qualified ?? false
       const geminiReason = entry?.reason ?? null
-      const isQualified  = cityOk && companyOk
+      const isQualified  = companyOk  // city no longer gates qualification for any pilot type
 
       if (isQualified) qualifiedInstalls++
 
