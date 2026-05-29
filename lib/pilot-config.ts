@@ -7,10 +7,10 @@ export type PilotMeta = {
 
 export const PILOT_META: Record<string, PilotMeta> = {
   'eastern-monk': { linkrunnerUrl: 'https://link.tal.af/?c=osBZBZ', budget: 177000 },
-  'aarchi':       { linkrunnerUrl: 'https://link.tal.af/?c=STKnPc', budget: 60000,  videoCount: 72,  views: 996899 },
-  'yoursbossy':   { linkrunnerUrl: 'https://link.tal.af/?c=lbOtUm' },
+  'aarchi':       { linkrunnerUrl: 'https://link.tal.af/?c=STKnPc', budget: 60000,  videoCount: 72,  views: 1700000 },
+  'yoursbossy':   { linkrunnerUrl: 'https://link.tal.af/?c=lbOtUm', budget: 205000 },
   'the-other':    { linkrunnerUrl: 'https://link.tal.af/?c=glrEWM', budget: 288500 },
-  'third-draft':  { linkrunnerUrl: 'https://link.tal.af/?c=wPPtfW', budget: 236000, videoCount: 120, views: 3052761 },
+  'third-draft':  { linkrunnerUrl: 'https://link.tal.af/?c=wPPtfW', budget: 200000, videoCount: 120, views: 10200000 },
 }
 
 export function getPilotMeta(slug: string): PilotMeta | undefined {
