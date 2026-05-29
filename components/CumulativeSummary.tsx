@@ -261,6 +261,9 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
   const totalInstalls = filtered.reduce((s, m) => s + (m.lr_installs ?? 0), 0)
   const totalSignups  = filtered.reduce((s, m) => s + (m.lr_signups  ?? 0), 0)
   const totalViews    = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.views ?? 0), 0)
+  const totalBudget   = filtered.reduce((s, m) => s + (PILOT_META[m.pilot.linkrunner_campaign_name?.toLowerCase().trim() ?? '']?.budget ?? 0), 0)
+  const costPerInstall = totalBudget > 0 && totalInstalls > 0 ? Math.round(totalBudget / totalInstalls) : null
+  const cpm            = totalBudget > 0 && totalViews > 0    ? Math.round((totalBudget / totalViews) * 1000) : null
 
   const filteredIds = new Set(filtered.map(m => m.pilot_id))
 
