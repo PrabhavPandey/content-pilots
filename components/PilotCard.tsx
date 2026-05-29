@@ -57,6 +57,14 @@ export default function PilotCard({
     budget && videoCount && videoCount > 0
       ? Math.round(budget / videoCount)
       : null
+  const costPerInstall =
+    budget && m.lr_installs > 0
+      ? Math.round(budget / m.lr_installs)
+      : null
+  const cpm =
+    budget && views && views > 0
+      ? Math.round((budget / views) * 1000)
+      : null
 
   return (
     <div
