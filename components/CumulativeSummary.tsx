@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { MetricsWithPilot, PilotInstall } from '@/lib/db'
-import { PILOT_META } from '@/lib/pilot-config'
+import { PILOT_META, formatInr } from '@/lib/pilot-config'
 
 type Props = {
   metrics: MetricsWithPilot[]
