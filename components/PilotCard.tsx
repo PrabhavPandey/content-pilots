@@ -280,6 +280,22 @@ export default function PilotCard({
                 </span>
               </div>
             )}
+            {costPerInstall && (
+              <div className="text-right">
+                <span
+                  className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
+                  style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+                >
+                  Cost / install
+                </span>
+                <span
+                  className="text-[16px] font-semibold"
+                  style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
+                >
+                  {formatInr(costPerInstall)}
+                </span>
+              </div>
+            )}
             {budget && m.qualified_installs > 0 && (
               <div className="text-right">
                 <span
@@ -293,6 +309,22 @@ export default function PilotCard({
                   style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
                 >
                   {formatInr(Math.round(budget / m.qualified_installs))}
+                </span>
+              </div>
+            )}
+            {cpm && (
+              <div className="text-right">
+                <span
+                  className="text-[10px] font-semibold tracking-[0.15em] uppercase block mb-1"
+                  style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
+                >
+                  CPM
+                </span>
+                <span
+                  className="text-[16px] font-semibold"
+                  style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
+                >
+                  {formatInr(cpm)}
                 </span>
               </div>
             )}
