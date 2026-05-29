@@ -383,6 +383,16 @@ export default function CumulativeSummary({ metrics, installsMap, hideFinancials
           wide
         />
       </div>
+      {!hideFinancials && (costPerInstall || cpm) && (
+        <div className="flex gap-2 flex-wrap mt-2">
+          {costPerInstall && (
+            <StatCard label="Cost / install" value={formatInr(costPerInstall)} />
+          )}
+          {cpm && (
+            <StatCard label="CPM" value={formatInr(cpm)} />
+          )}
+        </div>
+      )}
 
 
       <Funnel steps={funnelSteps} />
