@@ -6,8 +6,8 @@ import { useState, useEffect, useRef } from 'react'
 function useCountUp(target: number, duration: number, startDelay = 0) {
   const [count, setCount]   = useState(0)
   const [done,  setDone]    = useState(false)
-  const rafRef  = useRef<number>()
-  const startTs = useRef<number>()
+  const rafRef  = useRef<number | undefined>(undefined)
+  const startTs = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     const kick = setTimeout(() => {
