@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 
-// ── count-up hook — runs once on mount (component is keyed so it remounts per slide) ──
+// ── count-up hook ─────────────────────────────────────────────────────────────
 function useCountUp(target: number, duration: number, startDelay = 0) {
-  const [count, setCount]   = useState(0)
-  const [done,  setDone]    = useState(false)
+  const [count, setCount] = useState(0)
+  const [done,  setDone]  = useState(false)
   const rafRef  = useRef<number | undefined>(undefined)
   const startTs = useRef<number | undefined>(undefined)
 
@@ -15,40 +15,39 @@ function useCountUp(target: number, duration: number, startDelay = 0) {
       const tick = (ts: number) => {
         if (!startTs.current) startTs.current = ts
         const p = Math.min((ts - startTs.current) / duration, 1)
-        const e = 1 - Math.pow(1 - p, 3) // ease-out cubic
+        const e = 1 - Math.pow(1 - p, 3)
         setCount(Math.round(e * target))
         if (p < 1) { rafRef.current = requestAnimationFrame(tick) }
-        else       { setCount(target); setTimeout(() => setDone(true), 380) }
+        else       { setCount(target); setTimeout(() => setDone(true), 300) }
       }
       rafRef.current = requestAnimationFrame(tick)
     }, startDelay)
     return () => { clearTimeout(kick); if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, []) // empty — component remounts on slide change via key prop
+  }, [])
 
   return { count, done }
 }
 
-// ── formatters ────────────────────────────────────────────────────────────────
 const us  = (n: number) => n.toLocaleString('en-US')
 const cmp = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
   : n >= 1_000   ? `${(n / 1_000).toFixed(1)}K`
   : us(n)
 
-// ── slide data ────────────────────────────────────────────────────────────────
+// ── slides ────────────────────────────────────────────────────────────────────
 const SLIDES = [
   {
     type:    'title' as const,
     eyebrow: 'tal · ugc pilots',
-    headline:'may 2026.',
-    sub:     'aarchi & third draft films · 26 days in',
+    headline:'tal · ugc.',
+    sub:     'aarchi & third draft films',
     color:   '#fff',
     bg:      '#0D0D0D',
     glow:    'rgba(255,255,255,0.07)',
   },
   {
     type:    'stat' as const,
-    raw:     120,
+    raw:     220,
     prefix:  '',
     compact: null,
     label:   'videos made.',
@@ -72,7 +71,7 @@ const SLIDES = [
   },
   {
     type:    'stat' as const,
-    raw:     5959,
+    raw:     6145,
     prefix:  '',
     compact: null,
     label:   'app installs.',
@@ -84,19 +83,7 @@ const SLIDES = [
   },
   {
     type:    'stat' as const,
-    raw:     4221,
-    prefix:  '',
-    compact: null,
-    label:   'people onboarded.',
-    sub:     '70.8% of installs. on a consumer app. in 26 days.',
-    color:   '#FDE047',
-    bg:      '#0D0B00',
-    glow:    'rgba(253,224,71,0.15)',
-    ms:      1100,
-  },
-  {
-    type:    'stat' as const,
-    raw:     789,
+    raw:     804,
     prefix:  '',
     compact: null,
     label:   'qualified professionals.',
@@ -110,9 +97,9 @@ const SLIDES = [
   {
     type:    'compare' as const,
     label:   'cost per install.',
-    left:    { raw: 44,  label: '₹44',  sub: 'your content', color: '#4ADE80' },
+    left:    { raw: 42,  label: '₹42',  sub: 'your content', color: '#4ADE80' },
     right:   { raw: 120, label: '₹120', sub: 'linkedin ads', color: 'rgba(255,255,255,0.25)' },
-    sub:     'linkedin stops the moment you stop paying. content doesn\'t.',
+    sub:     "linkedin stops the moment you stop paying. content doesn't.",
     bg:      '#00100A',
     glow:    'rgba(74,222,128,0.12)',
   },
@@ -131,16 +118,27 @@ const SLIDES = [
   {
     type:     'end' as const,
     headline: 'content works.',
-    sub:      'day 26. still running.',
+    sub:      'day 27. still running.',
     bg:       '#0D0D0D',
     glow:     'rgba(255,255,255,0.04)',
     stats: [
       { v: '11.9M', l: 'views',        color: '#22D3EE' },
-      { v: '5,959', l: 'installs',     color: '#C084FC' },
-      { v: '789',   l: 'qualified',    color: '#4ADE80' },
+      { v: '6,145', l: 'installs',     color: '#C084FC' },
+      { v: '804',   l: 'qualified',    color: '#4ADE80' },
       { v: '₹22',   l: 'cpm',          color: '#2DD4BF' },
-      { v: '₹44',   l: 'cost/install', color: '#FCD34D' },
-      { v: '120',   l: 'videos',       color: '#FDE047' },
+      { v: '₹42',   l: 'cost/install', color: '#FCD34D' },
+      { v: '220',   l: 'videos',       color: '#FDE047' },
+    ],
+  },
+  {
+    type:     'manifesto' as const,
+    bg:       '#0D0D0D',
+    glow:     'rgba(74,222,128,0.08)',
+    lines:    [
+      "we'll run",
+      'the biggest',
+      '& best ugc campaign',
+      'the country has ever seen.',
     ],
   },
 ]
@@ -150,45 +148,86 @@ const SLIDES = [
 function TitleSlide({ s }: { s: typeof SLIDES[0] & { type: 'title' } }) {
   return (
     <div style={C.content}>
-      <p style={C.eyebrow}>{s.eyebrow}</p>
-      <h1 style={{ ...C.num, fontSize: 'clamp(56px,13vw,100px)', color: s.color, letterSpacing: '-0.03em' }}>
+      <p style={{ ...C.eyebrow, animation: 'up 0.45s cubic-bezier(0.16,1,0.3,1) both' }}>{s.eyebrow}</p>
+      <h1 style={{
+        ...C.num,
+        fontSize: 'clamp(56px,13vw,100px)',
+        color: s.color,
+        letterSpacing: '-0.03em',
+        animation: 'up 0.45s 0.05s cubic-bezier(0.16,1,0.3,1) both',
+      }}>
         {s.headline}
       </h1>
-      <p style={C.sub}>{s.sub}</p>
+      <p style={{ ...C.sub, animation: 'up 0.45s 0.15s cubic-bezier(0.16,1,0.3,1) both' }}>{s.sub}</p>
     </div>
   )
 }
 
+// Number display with smooth raw→compact crossfade
+function AnimatedNumber({
+  count, done, target, prefix, compact, color, fontSize,
+}: {
+  count: number; done: boolean; target: number; prefix: string
+  compact: string | null; color: string; fontSize: string
+}) {
+  const [phase, setPhase] = useState<'counting' | 'exit' | 'compact'>('counting')
+
+  useEffect(() => {
+    if (done && compact) {
+      setPhase('exit')
+      const t = setTimeout(() => setPhase('compact'), 340)
+      return () => clearTimeout(t)
+    }
+  }, [done, compact])
+
+  const numStyle: React.CSSProperties = {
+    ...C.num,
+    color,
+    fontSize,
+    textShadow: `0 0 80px ${color}40`,
+    display: 'block',
+    position: 'relative' as const,
+  }
+
+  if (phase === 'counting') {
+    return <span style={numStyle}>{prefix}{us(count)}</span>
+  }
+  if (phase === 'exit') {
+    return <span style={{ ...numStyle, animation: 'numExit 0.32s cubic-bezier(0.4,0,1,1) both' }}>
+      {prefix}{us(target)}
+    </span>
+  }
+  // compact phase
+  return <span style={{ ...numStyle, animation: 'numEnter 0.42s cubic-bezier(0.16,1,0.3,1) both' }}>
+    {prefix}{compact}
+  </span>
+}
+
 function StatSlide({ s }: { s: Extract<typeof SLIDES[number], { type: 'stat' }> }) {
   const { count, done } = useCountUp(s.raw, s.ms)
-  const raw     = `${s.prefix}${us(count)}`
-  const compact = s.compact ? `${s.prefix}${s.compact}` : raw
-  const display = done && s.compact ? compact : raw
+  const isAccent = 'accent' in s && s.accent
 
   return (
     <div style={C.content}>
-      <div
-        style={{
-          ...C.num,
-          color: s.color,
-          fontSize: 'clamp(76px,19vw,148px)',
-          textShadow: `0 0 80px ${s.color}40`,
-          transition: done ? 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)' : 'none',
-          transform: done && s.compact ? 'scale(1.04)' : 'scale(1)',
-          animation: 'slideUp 0.45s cubic-bezier(0.16,1,0.3,1) both',
-        }}
-      >
-        {display}
-      </div>
-      <p style={{ ...C.label, color: `${s.color}90`, animation: 'slideUp 0.45s 0.1s cubic-bezier(0.16,1,0.3,1) both' }}>
+      <AnimatedNumber
+        count={count} done={done} target={s.raw}
+        prefix={s.prefix} compact={s.compact}
+        color={s.color}
+        fontSize="clamp(88px,22vw,168px)"
+      />
+      <p style={{
+        ...C.label,
+        color: `${s.color}90`,
+        animation: 'up 0.45s 0.1s cubic-bezier(0.16,1,0.3,1) both',
+      }}>
         {s.label}
       </p>
-      <p style={{ ...C.sub, animation: 'slideUp 0.45s 0.2s cubic-bezier(0.16,1,0.3,1) both' }}>
+      <p style={{ ...C.sub, animation: 'up 0.45s 0.2s cubic-bezier(0.16,1,0.3,1) both' }}>
         {s.sub}
       </p>
-      {s.accent && done && (
-        <div style={{ marginTop: 32, animation: 'fadeIn 0.6s ease both' }}>
-          <div style={{ height: 2, width: 48, background: s.color, margin: '0 auto', borderRadius: 2 }} />
+      {isAccent && done && (
+        <div style={{ marginTop: 28, animation: 'fadeIn 0.6s ease both' }}>
+          <div style={{ height: 2, width: 40, background: s.color, margin: '0 auto', borderRadius: 2 }} />
         </div>
       )}
     </div>
@@ -201,30 +240,25 @@ function CompareSlide({ s }: { s: Extract<typeof SLIDES[number], { type: 'compar
 
   return (
     <div style={C.content}>
-      <p style={{ ...C.eyebrow, marginBottom: 36, animation: 'slideUp 0.45s cubic-bezier(0.16,1,0.3,1) both' }}>
+      <p style={{ ...C.eyebrow, marginBottom: 36, animation: 'up 0.45s cubic-bezier(0.16,1,0.3,1) both' }}>
         {s.label}
       </p>
-      <div style={{ display: 'flex', gap: 0, justifyContent: 'center', marginBottom: 36 }}>
-        {/* LEFT — your content */}
-        <div style={{ ...C.compareCol, animation: 'slideUp 0.45s 0.05s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <div style={{ ...C.num, fontSize: 'clamp(56px,13vw,96px)', color: s.left.color, textShadow: `0 0 60px ${s.left.color}50` }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 36 }}>
+        <div style={{ ...C.compareCol, animation: 'up 0.45s 0.05s cubic-bezier(0.16,1,0.3,1) both' }}>
+          <span style={{ ...C.num, fontSize: 'clamp(64px,14vw,108px)', color: s.left.color, textShadow: `0 0 60px ${s.left.color}50` }}>
             ₹{us(l.count)}
-          </div>
+          </span>
           <p style={{ ...C.label, color: `${s.left.color}80`, marginTop: 10 }}>{s.left.sub}</p>
         </div>
-
-        {/* divider */}
         <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 32px', alignSelf: 'stretch' }} />
-
-        {/* RIGHT — linkedin */}
-        <div style={{ ...C.compareCol, animation: 'slideUp 0.45s 0.15s cubic-bezier(0.16,1,0.3,1) both' }}>
-          <div style={{ ...C.num, fontSize: 'clamp(56px,13vw,96px)', color: s.right.color, textDecoration: 'line-through', textDecorationColor: 'rgba(255,80,80,0.5)' }}>
+        <div style={{ ...C.compareCol, animation: 'up 0.45s 0.15s cubic-bezier(0.16,1,0.3,1) both' }}>
+          <span style={{ ...C.num, fontSize: 'clamp(64px,14vw,108px)', color: s.right.color, textDecoration: 'line-through', textDecorationColor: 'rgba(255,80,80,0.5)' }}>
             ₹{us(r.count)}
-          </div>
+          </span>
           <p style={{ ...C.label, color: 'rgba(255,255,255,0.22)', marginTop: 10 }}>{s.right.sub}</p>
         </div>
       </div>
-      <p style={{ ...C.sub, animation: 'slideUp 0.45s 0.25s cubic-bezier(0.16,1,0.3,1) both' }}>{s.sub}</p>
+      <p style={{ ...C.sub, animation: 'up 0.45s 0.25s cubic-bezier(0.16,1,0.3,1) both' }}>{s.sub}</p>
     </div>
   )
 }
@@ -232,37 +266,51 @@ function CompareSlide({ s }: { s: Extract<typeof SLIDES[number], { type: 'compar
 function EndSlide({ s }: { s: Extract<typeof SLIDES[number], { type: 'end' }> }) {
   return (
     <div style={{ ...C.content, maxWidth: 520 }}>
-      <p style={{ ...C.eyebrow, animation: 'slideUp 0.45s cubic-bezier(0.16,1,0.3,1) both' }}>
-        tal · ugc pilots
-      </p>
-      <h2 style={{
-        ...C.num, fontSize: 'clamp(52px,12vw,92px)', color: '#fff',
-        marginBottom: 16, animation: 'slideUp 0.45s 0.05s cubic-bezier(0.16,1,0.3,1) both',
-      }}>
+      <p style={{ ...C.eyebrow, animation: 'up 0.45s cubic-bezier(0.16,1,0.3,1) both' }}>tal · ugc pilots</p>
+      <h2 style={{ ...C.num, fontSize: 'clamp(52px,12vw,92px)', color: '#fff', marginBottom: 16, animation: 'up 0.45s 0.05s cubic-bezier(0.16,1,0.3,1) both' }}>
         {s.headline}
       </h2>
-      <p style={{ ...C.sub, marginBottom: 48, animation: 'slideUp 0.45s 0.1s cubic-bezier(0.16,1,0.3,1) both' }}>
-        {s.sub}
-      </p>
+      <p style={{ ...C.sub, marginBottom: 48, animation: 'up 0.45s 0.1s cubic-bezier(0.16,1,0.3,1) both' }}>{s.sub}</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
         {s.stats.map(({ v, l, color }, i) => (
+          <div key={l} style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: `1px solid ${color}22`,
+            borderRadius: 14,
+            padding: '16px 10px',
+            textAlign: 'center',
+            animation: `up 0.45s ${0.15 + i * 0.06}s cubic-bezier(0.16,1,0.3,1) both`,
+          }}>
+            <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 22, fontWeight: 700, color, marginBottom: 5 }}>{v}</div>
+            <div style={{ fontFamily: 'var(--font-inconsolata)', fontSize: 10, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)' }}>{l}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ManifestoSlide({ s }: { s: Extract<typeof SLIDES[number], { type: 'manifesto' }> }) {
+  return (
+    <div style={{ ...C.content, maxWidth: 640 }}>
+      <p style={{ ...C.eyebrow, color: 'rgba(74,222,128,0.6)', marginBottom: 36, animation: 'up 0.4s cubic-bezier(0.16,1,0.3,1) both' }}>
+        what&apos;s next.
+      </p>
+      <div>
+        {s.lines.map((line, i) => (
           <div
-            key={l}
+            key={i}
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${color}22`,
-              borderRadius: 14,
-              padding: '16px 10px',
-              textAlign: 'center',
-              animation: `slideUp 0.45s ${0.15 + i * 0.06}s cubic-bezier(0.16,1,0.3,1) both`,
+              fontFamily: 'var(--font-poppins)',
+              fontWeight: 700,
+              fontSize: 'clamp(36px, 8vw, 68px)',
+              lineHeight: 1.05,
+              letterSpacing: '-0.02em',
+              color: i === s.lines.length - 1 ? '#4ADE80' : '#fff',
+              animation: `up 0.5s ${0.05 + i * 0.12}s cubic-bezier(0.16,1,0.3,1) both`,
             }}
           >
-            <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 22, fontWeight: 700, color, marginBottom: 5 }}>
-              {v}
-            </div>
-            <div style={{ fontFamily: 'var(--font-inconsolata)', fontSize: 10, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.35)' }}>
-              {l}
-            </div>
+            {line}
           </div>
         ))}
       </div>
@@ -271,7 +319,6 @@ function EndSlide({ s }: { s: Extract<typeof SLIDES[number], { type: 'end' }> })
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
-
 export default function WrappedPage() {
   const [idx,     setIdx]     = useState(0)
   const [animKey, setAnimKey] = useState(0)
@@ -318,23 +365,22 @@ export default function WrappedPage() {
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%,-50%)',
         width: 700, height: 700, borderRadius: '50%',
-        background: `radial-gradient(circle, ${slide.glow} 0%, transparent 68%)`,
+        background: `radial-gradient(circle, ${'glow' in slide ? slide.glow : 'rgba(255,255,255,0.05)'} 0%, transparent 68%)`,
         pointerEvents: 'none',
         transition: 'background 0.7s ease',
       }} />
 
-      {/* Noise grain overlay */}
+      {/* Grain */}
       <div style={{
         position: 'absolute', inset: 0, opacity: 0.025,
         backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")',
-        backgroundSize: '200px 200px',
-        pointerEvents: 'none',
+        backgroundSize: '200px 200px', pointerEvents: 'none',
       }} />
 
       {/* Progress dots */}
       <div style={{ position: 'absolute', top: 26, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
         {SLIDES.map((sl, i) => {
-          const c = 'color' in sl ? sl.color : '#fff'
+          const c = 'color' in sl ? sl.color : (sl.type === 'manifesto' ? '#4ADE80' : '#fff')
           return (
             <div key={i} style={{
               width: i === idx ? 22 : 6, height: 6, borderRadius: 3,
@@ -345,13 +391,13 @@ export default function WrappedPage() {
         })}
       </div>
 
-      {/* Slide */}
-      {slide.type === 'title'   && <TitleSlide   key={animKey} s={slide as any} />}
-      {slide.type === 'stat'    && <StatSlide    key={animKey} s={slide as any} />}
-      {slide.type === 'compare' && <CompareSlide key={animKey} s={slide as any} />}
-      {slide.type === 'end'     && <EndSlide     key={animKey} s={slide as any} />}
+      {/* Slides */}
+      {slide.type === 'title'     && <TitleSlide     key={animKey} s={slide as any} />}
+      {slide.type === 'stat'      && <StatSlide      key={animKey} s={slide as any} />}
+      {slide.type === 'compare'   && <CompareSlide   key={animKey} s={slide as any} />}
+      {slide.type === 'end'       && <EndSlide       key={animKey} s={slide as any} />}
+      {slide.type === 'manifesto' && <ManifestoSlide key={animKey} s={slide as any} />}
 
-      {/* Tap hint */}
       {!isLast && (
         <p style={{ position: 'absolute', bottom: 26, fontFamily: 'var(--font-inconsolata)', fontSize: 11, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.18)', animation: 'pulse 2.2s ease-in-out infinite' }}>
           tap to continue
@@ -359,44 +405,48 @@ export default function WrappedPage() {
       )}
 
       <style>{`
-        @keyframes slideUp {
+        @keyframes up {
           from { opacity:0; transform:translateY(26px); }
           to   { opacity:1; transform:translateY(0); }
         }
-        @keyframes fadeIn {
-          from { opacity:0; }
-          to   { opacity:1; }
+        @keyframes numExit {
+          from { opacity:1; transform:translateY(0) scale(1); filter:blur(0px); }
+          to   { opacity:0; transform:translateY(-28px) scale(0.94); filter:blur(4px); }
         }
+        @keyframes numEnter {
+          from { opacity:0; transform:translateY(28px) scale(0.94); filter:blur(4px); }
+          to   { opacity:1; transform:translateY(0) scale(1); filter:blur(0px); }
+        }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
         @keyframes pulse {
-          0%,100% { opacity:0.18; }
-          50%     { opacity:0.45; }
+          0%,100%{opacity:0.18} 50%{opacity:0.45}
         }
-        * { box-sizing: border-box; }
+        * { box-sizing:border-box; }
       `}</style>
     </div>
   )
 }
 
-// ── shared style constants ────────────────────────────────────────────────────
+// ── shared style tokens ───────────────────────────────────────────────────────
 const C = {
   content: {
-    textAlign:  'center'    as const,
-    maxWidth:   580,
+    textAlign:  'center'   as const,
+    maxWidth:   600,
     width:      '100%',
-    position:   'relative'  as const,
+    position:   'relative' as const,
     zIndex:     1,
   },
   num: {
     fontFamily:    'var(--font-poppins)',
     fontWeight:    700,
-    lineHeight:    0.9,
+    lineHeight:    0.88,
     letterSpacing: '-0.03em',
     marginBottom:  20,
     display:       'block',
   },
   label: {
     fontFamily:    'var(--font-inconsolata)',
-    fontSize:      17,
+    fontSize:      18,
     letterSpacing: '0.1em',
     marginBottom:  16,
     display:       'block',
@@ -420,9 +470,9 @@ const C = {
   },
   compareCol: {
     flex:          1,
-    display:       'flex'           as const,
-    flexDirection: 'column'        as const,
-    alignItems:    'center'        as const,
-    textAlign:     'center'        as const,
+    display:       'flex'    as const,
+    flexDirection: 'column'  as const,
+    alignItems:    'center'  as const,
+    textAlign:     'center'  as const,
   },
 }
