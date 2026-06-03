@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
           name:           meta.name,
           company:        meta.company,
           job_role:       meta.job_role,
-          city:           meta.city,
+          city:           null,
           linkedin:       meta.linkedin,
           onboarded_at:   meta.onboarded_at,
           is_city_qualified:    false, // both campaigns are UGC — no city gate
