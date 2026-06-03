@@ -24,8 +24,11 @@ export default async function DashboardPage({
 
   const isAdmin  = session.user.role === 'admin'
   const pilotId  = session.user.pilotId ?? undefined
+  // Pilots can access campaign mode if their campaign exists in CAMPAIGN_META
+  const pilotCampaignSlug = pilotId ? PILOT_TO_CAMPAIGN[pilotId] : undefined
+  const canSeeCampaigns   = isAdmin || !!pilotCampaignSlug
   const params   = await searchParams
-  const mode     = isAdmin && params.mode === 'campaign' ? 'campaign' : 'pilots'
+  const mode     = canSeeCampaigns && params.mode === 'campaign' ? 'campaign' : 'pilots'
 
   const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
