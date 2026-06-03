@@ -1,24 +1,77 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getLatestMetrics, getAllPilotInstalls } from '@/lib/db'
+import { getLatestMetrics, getAllPilotInstalls, getLatestCampaignData } from '@/lib/db'
 import { getPilotMeta } from '@/lib/pilot-config'
+import { CAMPAIGN_META } from '@/lib/campaign-config'
 import PilotCard from '@/components/PilotCard'
 import InstallerTable from '@/components/InstallerTable'
 import SyncBadge from '@/components/SyncBadge'
 import DashboardAdminView from '@/components/DashboardAdminView'
 import RunSyncButton from '@/components/RunSyncButton'
+import CampaignCard from '@/components/CampaignCard'
+import CampaignSummary from '@/components/CampaignSummary'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>
+}) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const isAdmin = session.user.role === 'admin'
-  const pilotId = session.user.pilotId ?? undefined
-  const metrics = await getLatestMetrics(isAdmin ? undefined : pilotId)
+  const isAdmin  = session.user.role === 'admin'
+  const pilotId  = session.user.pilotId ?? undefined
+  const params   = await searchParams
+  const mode     = isAdmin && params.mode === 'campaign' ? 'campaign' : 'pilots'
 
-  // Fetch installs: all pilots for admin, scoped to this pilot for agency
+  const monthYear = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
+  // ── Campaign mode (admin only) ────────────────────────────────────────────
+  if (mode === 'campaign') {
+    const campaignSlugs = Object.keys(CAMPAIGN_META)
+    const campaignData  = await getLatestCampaignData(campaignSlugs)
+
+    const campaigns = campaignSlugs.map((slug, i) => ({
+      data: campaignData[i],
+      meta: CAMPAIGN_META[slug],
+    }))
+
+    return (
+      <div className="fade-up">
+        <div className="mb-10">
+          <h1 className="text-[26px] font-semibold leading-tight" style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}>
+            Campaigns
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            UGC · {monthYear}
+          </p>
+          <div className="flex items-center gap-3 mt-2">
+            <a
+              href="/dashboard"
+              className="text-[11px] font-semibold tracking-[0.08em] uppercase px-3 py-1 rounded-md"
+              style={{ fontFamily: 'var(--font-inconsolata)', background: '#F0EDE8', color: 'var(--text-secondary)', textDecoration: 'none' }}
+            >
+              ← Pilots
+            </a>
+            <RunSyncButton campaignMode />
+          </div>
+        </div>
+
+        <CampaignSummary campaigns={campaigns} />
+
+        <div className="space-y-8">
+          {campaigns.map(({ data, meta }) => (
+            <CampaignCard key={data.slug} data={data} meta={meta} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Pilots mode (default) ─────────────────────────────────────────────────
+  const metrics     = await getLatestMetrics(isAdmin ? undefined : pilotId)
   const installsMap = isAdmin
     ? await getAllPilotInstalls()
     : pilotId
@@ -26,24 +79,16 @@ export default async function DashboardPage() {
       : new Map()
 
   const latestSync = metrics.find(m => m.fetched_at)?.fetched_at ?? null
-  const monthYear  = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   return (
     <div className="fade-up">
-      {/* Page header */}
       <div className="mb-10">
         {!isAdmin && (
-          <p
-            className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-2"
-            style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}
-          >
+          <p className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-2" style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}>
             Your Campaign
           </p>
         )}
-        <h1
-          className="text-[26px] font-semibold leading-tight"
-          style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}
-        >
+        <h1 className="text-[26px] font-semibold leading-tight" style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}>
           {isAdmin ? 'Pilots' : (metrics[0]?.pilot.name ?? 'Dashboard')}
         </h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -51,10 +96,18 @@ export default async function DashboardPage() {
             ? `UGC & Influencer · ${monthYear}`
             : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
         </p>
-        {/* Sync badge + run button on the same row */}
         <div className="flex items-center gap-3 mt-2">
           {latestSync && <SyncBadge syncedAt={latestSync} />}
           {isAdmin && <RunSyncButton />}
+          {isAdmin && (
+            <a
+              href="/dashboard?mode=campaign"
+              className="text-[11px] font-semibold tracking-[0.08em] uppercase px-3 py-1 rounded-md"
+              style={{ fontFamily: 'var(--font-inconsolata)', background: '#1A1A1A', color: '#fff', textDecoration: 'none' }}
+            >
+              Campaigns →
+            </a>
+          )}
         </div>
       </div>
 
@@ -71,24 +124,13 @@ export default async function DashboardPage() {
               const meta = getPilotMeta(m.pilot.linkrunner_campaign_name)
               return (
                 <div key={m.pilot_id}>
-                  <PilotCard
-                    metrics={m}
-                    isAdmin={false}
-                    linkrunnerUrl={meta?.linkrunnerUrl}
-                    index={i}
-                  />
-                  <InstallerTable
-                    installs={installsMap.get(m.pilot_id) ?? []}
-                    showPhone={false}
-                  />
+                  <PilotCard metrics={m} isAdmin={false} linkrunnerUrl={meta?.linkrunnerUrl} index={i} />
+                  <InstallerTable installs={installsMap.get(m.pilot_id) ?? []} showPhone={false} />
                 </div>
               )
             })}
           </div>
-          <p
-            className="text-center text-sm mt-16 mb-2 italic"
-            style={{ fontFamily: 'var(--font-playfair)', color: 'var(--text-muted)' }}
-          >
+          <p className="text-center text-sm mt-16 mb-2 italic" style={{ fontFamily: 'var(--font-playfair)', color: 'var(--text-muted)' }}>
             make magic · one reel at a time
           </p>
         </div>
