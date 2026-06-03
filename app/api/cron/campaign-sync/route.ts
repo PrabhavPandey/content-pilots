@@ -6,11 +6,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/db'
-import { getAllCampaignStats } from '@/lib/linkrunner'
+import { getCampaignStatsBySearch, type LinkrunnerCampaignStats } from '@/lib/linkrunner'
 import { getAllCampaignInstalls } from '@/lib/mixpanel'
 import { getOnboardedUsers } from '@/lib/metabase'
 import { batchClassifyUsers, buildCacheKey } from '@/lib/gemini'
 import { CAMPAIGN_META, getAllCreatorSlugs, slugToCampaign } from '@/lib/campaign-config'
+
+const wait = (s: number) => new Promise(r => setTimeout(r, s * 1000))
 
 export const maxDuration = 300
 
