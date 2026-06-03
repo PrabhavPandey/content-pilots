@@ -74,14 +74,18 @@ export async function getAllCampaignStats(): Promise<Map<string, LinkrunnerCampa
       if (name) map.set(name, parseCampaign(c))
     }
 
-    // Only paginate if there are somehow more than 500 campaigns
+    // If API caps internally below our limit=500, paginate with a 65s wait between
+    // pages to respect the 1 req/min rate limit.
     for (let p = 2; p <= totalPages; p++) {
+      console.log(`[Linkrunner] waiting 65s before fetching page ${p}/${totalPages} (rate limit)`)
+      await new Promise(r => setTimeout(r, 65_000))
       const page = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '500', page: String(p) })
       const campaigns: any[] = page?.data?.campaigns ?? []
       for (const c of campaigns) {
         const name = (c.name ?? '').toLowerCase().trim()
         if (name) map.set(name, parseCampaign(c))
       }
+      console.log(`[Linkrunner] page ${p}: ${campaigns.length} campaigns`)
     }
 
     console.log(`[Linkrunner] loaded ${map.size} campaigns with clicks+installs+signups`)
