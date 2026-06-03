@@ -5,7 +5,7 @@ import type { PilotInstall } from '@/lib/db'
 
 type DataPoint = { date: string; total: number; qualified: number }
 
-function buildData(installs: PilotInstall[]): DataPoint[] {
+function buildData(installs: PilotInstall[], startDate?: string): DataPoint[] {
   const byDate = new Map<string, { total: number; qualified: number }>()
   for (const inst of installs) {
     if (!inst.onboarded_at) continue
@@ -15,9 +15,15 @@ function buildData(installs: PilotInstall[]): DataPoint[] {
     if (inst.is_qualified) existing.qualified++
     byDate.set(date, existing)
   }
-  return [...byDate.entries()]
+  let points = [...byDate.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, counts]) => ({ date, ...counts }))
+
+  // Pin x-axis to startDate — prepend a zero point if data starts later
+  if (startDate && (points.length === 0 || points[0].date > startDate)) {
+    points = [{ date: startDate, total: 0, qualified: 0 }, ...points]
+  }
+  return points
 }
 
 function formatDate(dateStr: string): string {
