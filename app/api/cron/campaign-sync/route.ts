@@ -89,11 +89,7 @@ export async function GET(req: NextRequest) {
     ? await batchClassifyUsers(classifyQueue, 'ugc').catch(() => new Map())
     : new Map()
 
-  // Linkrunner rate-limits to 1 req/min — detect if the call returned no data
-  const lrHasData = (lrMap as Map<string, any>).size > 0
-  if (!lrHasData) {
-    console.warn('[CampaignSync] Linkrunner returned no data (likely rate-limited) — LR metrics will carry forward from previous run')
-  }
+  console.log(`[CampaignSync] Linkrunner returned ${lrMap.size} creator stats`)
 
   // ── 5. Per-campaign processing ────────────────────────────────────────────
   const summary: Record<string, any> = {}
