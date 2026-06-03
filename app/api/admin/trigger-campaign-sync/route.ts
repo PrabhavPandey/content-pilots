@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { waitUntil } from '@vercel/functions'
 
 export async function POST() {
   const session = await auth()
@@ -12,9 +13,11 @@ export async function POST() {
 
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
 
-  fetch(`${baseUrl}/api/cron/campaign-sync?secret=${encodeURIComponent(secret)}`, {
-    cache: 'no-store',
-  }).catch(() => {})
+  waitUntil(
+    fetch(`${baseUrl}/api/cron/campaign-sync?secret=${encodeURIComponent(secret)}`, {
+      cache: 'no-store',
+    }).catch(() => {})
+  )
 
   return NextResponse.json({ message: 'Campaign sync started' }, { status: 202 })
 }
