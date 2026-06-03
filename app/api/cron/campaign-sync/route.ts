@@ -38,14 +38,28 @@ export async function GET(req: NextRequest) {
   console.log(`[CampaignSync] Starting sync for campaigns: ${campaignSlugs.join(', ')}`)
   console.log(`[CampaignSync] ${allCreatorSlugs.length} creator slugs total`)
 
-  // ── 1. Parallel: Linkrunner + Mixpanel ───────────────────────────────────
-  const [lrMap, mpMap] = await Promise.allSettled([
-    getAllCampaignStats(),
-    getAllCampaignInstalls(allCreatorSlugs),
-  ]).then(([lr, mp]) => [
-    lr.status === 'fulfilled' ? lr.value : new Map(),
-    mp.status === 'fulfilled' ? mp.value : new Map(),
-  ] as const)
+  // ── 1. Mixpanel (single call) + Linkrunner (one search per campaign) ──────
+  // Linkrunner's reporting API caps page size at 100 and rate-limits to 1 req/min,
+  // and creator slugs can fall on later pages. Instead we use server-side `search`
+  // (e.g. search "tdf" → all tdf1…tdf10 in one call). When more than one campaign
+  // needs a search, we space the calls 65s apart to respect the rate limit.
+  const mpPromise = getAllCampaignInstalls(allCreatorSlugs).catch(() => new Map())
+
+  const lrMap = new Map<string, LinkrunnerCampaignStats>()
+  const campaignsWithCreators = Object.entries(CAMPAIGN_META).filter(([, m]) => m.creators.length > 0)
+  let firstSearch = true
+  for (const [campaignSlug, campaignMeta] of campaignsWithCreators) {
+    if (!firstSearch) {
+      console.log('[CampaignSync] waiting 65s before next Linkrunner search (rate limit)')
+      await wait(65)
+    }
+    firstSearch = false
+    const term = campaignMeta.searchTerm ?? campaignSlug
+    const result = await getCampaignStatsBySearch(term)
+    for (const [name, stats] of result) lrMap.set(name, stats)
+  }
+
+  const mpMap = await mpPromise
 
   // ── 2. Collect all phones across all creators ─────────────────────────────
   const allPhones = new Set<string>()
