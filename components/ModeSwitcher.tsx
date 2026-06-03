@@ -1,79 +1,87 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 type Props = { mode: 'pilots' | 'campaign' }
+
+function LoadingBar({ visible }: { visible: boolean }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  if (!mounted) return null
+
+  return createPortal(
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0,
+      height: 2,
+      zIndex: 9999,
+      pointerEvents: 'none',
+      opacity: visible ? 1 : 0,
+      transition: 'opacity 0.3s ease',
+    }}>
+      <div style={{
+        height: '100%',
+        background: 'linear-gradient(90deg, #22D3EE, #A78BFA, #4ADE80)',
+        backgroundSize: '200% 100%',
+        animation: visible ? 'progress-slide 1.2s ease-in-out infinite' : 'none',
+        borderRadius: '0 2px 2px 0',
+        width: visible ? '85%' : '0%',
+        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      }} />
+      <style>{`
+        @keyframes progress-slide {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
+    </div>,
+    document.body
+  )
+}
 
 export default function ModeSwitcher({ mode }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const isPilots = mode === 'pilots'
 
   const go = (target: 'pilots' | 'campaign') => {
-    if (target === mode) return
+    if (target === mode || pending) return
     startTransition(() => {
       router.push(target === 'campaign' ? '/dashboard?mode=campaign' : '/dashboard')
     })
   }
 
-  const isPilots   = mode === 'pilots'
-  const isCampaign = mode === 'campaign'
-
   return (
-    <div style={{ position: 'relative', display: 'inline-flex' }}>
-      {/* Spinning aurora ring — always present, follows active tab */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: -2,
-          borderRadius: 14,
-          zIndex: 0,
-          overflow: 'hidden',
-          opacity: pending ? 0.5 : 1,
-          transition: 'opacity 0.3s ease',
-        }}
-      >
-        <div style={{
-          position: 'absolute',
-          inset: -20,
-          background: 'conic-gradient(from 0deg, #22D3EE, #A78BFA, #4ADE80, #F59E0B, #22D3EE)',
-          animation: 'aurora-spin 3s linear infinite',
-          borderRadius: '50%',
-        }} />
-        <div style={{
-          position: 'absolute',
-          inset: 2,
-          background: '#0D0D0D',
-          borderRadius: 12,
-        }} />
-      </div>
+    <>
+      <LoadingBar visible={pending} />
 
-      {/* Pill container */}
       <div
+        role="tablist"
         style={{
+          display: 'inline-flex',
           position: 'relative',
-          zIndex: 1,
-          display: 'flex',
           background: '#111',
-          borderRadius: 12,
+          borderRadius: 10,
           padding: 3,
           gap: 0,
+          opacity: pending ? 0.75 : 1,
+          transition: 'opacity 0.2s ease',
         }}
       >
-        {/* Sliding active indicator */}
+        {/* Sliding pill */}
         <div
+          aria-hidden
           style={{
             position: 'absolute',
             top: 3,
             bottom: 3,
-            width: 'calc(50% - 3px)',
-            borderRadius: 9,
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
-            transform: isPilots ? 'translateX(0)' : 'translateX(calc(100% + 0px))',
-            transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-            left: 3,
+            borderRadius: 7,
+            background: '#fff',
+            transition: 'left 0.32s cubic-bezier(0.34, 1.4, 0.64, 1), width 0.32s cubic-bezier(0.34, 1.4, 0.64, 1)',
+            left: isPilots ? 3 : 'calc(50% + 1.5px)',
+            width: 'calc(50% - 4.5px)',
           }}
         />
 
@@ -82,38 +90,52 @@ export default function ModeSwitcher({ mode }: Props) {
           return (
             <button
               key={tab}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => go(tab)}
               disabled={pending}
               style={{
                 position: 'relative',
                 zIndex: 1,
-                padding: '6px 16px',
-                borderRadius: 9,
+                padding: '6px 18px',
+                minWidth: 88,
                 border: 'none',
                 background: 'transparent',
-                cursor: isActive ? 'default' : 'pointer',
+                cursor: isActive || pending ? 'default' : 'pointer',
                 fontFamily: 'var(--font-inconsolata)',
                 fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: '0.12em',
+                letterSpacing: '0.1em',
                 textTransform: 'uppercase',
-                color: isActive ? '#fff' : 'rgba(255,255,255,0.35)',
-                transition: 'color 0.25s ease',
-                whiteSpace: 'nowrap',
+                color: isActive ? '#111' : 'rgba(255,255,255,0.38)',
+                transition: 'color 0.28s ease',
+                userSelect: 'none',
               }}
             >
               {tab === 'pilots' ? 'Pilots' : 'Campaigns'}
+              {pending && isActive && (
+                <span style={{
+                  display: 'inline-block',
+                  marginLeft: 6,
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: '#111',
+                  verticalAlign: 'middle',
+                  animation: 'dot-pulse 0.8s ease-in-out infinite',
+                }} />
+              )}
             </button>
           )
         })}
       </div>
 
       <style>{`
-        @keyframes aurora-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+        @keyframes dot-pulse {
+          0%, 100% { opacity: 0.3; transform: scale(0.8); }
+          50%       { opacity: 1;   transform: scale(1.2); }
         }
       `}</style>
-    </div>
+    </>
   )
 }
