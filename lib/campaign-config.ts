@@ -13,6 +13,9 @@ export type CampaignMeta = {
   type: 'ugc' | 'influencer'
   creators: CreatorMeta[]
   budget?: number
+  // Linkrunner search term that matches all this campaign's creator slugs in one API call.
+  // Defaults to the campaign key (e.g. 'tdf' matches tdf1…tdf10).
+  searchTerm?: string
 }
 
 export const CAMPAIGN_META: Record<string, CampaignMeta> = {
