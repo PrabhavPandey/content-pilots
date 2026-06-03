@@ -73,6 +73,12 @@ export async function GET(req: NextRequest) {
     ? await batchClassifyUsers(classifyQueue, 'ugc').catch(() => new Map())
     : new Map()
 
+  // Linkrunner rate-limits to 1 req/min — detect if the call returned no data
+  const lrHasData = (lrMap as Map<string, any>).size > 0
+  if (!lrHasData) {
+    console.warn('[CampaignSync] Linkrunner returned no data (likely rate-limited) — LR metrics will carry forward from previous run')
+  }
+
   // ── 5. Per-campaign processing ────────────────────────────────────────────
   const summary: Record<string, any> = {}
 
@@ -80,6 +86,15 @@ export async function GET(req: NextRequest) {
     const pilotType = campaignMeta.type
     const creatorRows: any[] = []
     let totalClicks = 0, totalInstalls = 0, totalSignups = 0, totalOpens = 0
+
+    // Fetch previous metrics row to carry forward LR numbers if LR is rate-limited
+    const { data: prevRows } = await db
+      .from('campaign_metrics')
+      .select('lr_clicks, lr_installs, lr_signups')
+      .eq('campaign_slug', campaignSlug)
+      .order('fetched_at', { ascending: false })
+      .limit(1)
+    const prevLR = prevRows?.[0]
 
     // Installs to write for this campaign
     const installRows: any[] = []
