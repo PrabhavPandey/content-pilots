@@ -39,8 +39,10 @@ export async function GET(req: NextRequest) {
   const campaignNames = pilots.map(p => p.linkrunner_campaign_name?.toLowerCase().trim() ?? '')
 
   // ── Parallel: Linkrunner + Mixpanel ─────────────────────────────────────
+  // Pass pilot campaign names so getAllCampaignStats only paginates past page 1 if a
+  // pilot isn't found there (normally all pilots are on page 1 → single fast call).
   const [lrMap, mpMap] = await Promise.allSettled([
-    getAllCampaignStats(),
+    getAllCampaignStats(campaignNames),
     getAllCampaignInstalls(campaignNames),
   ]).then(([lr, mp]) => [
     lr.status === 'fulfilled' ? lr.value : new Map(),
