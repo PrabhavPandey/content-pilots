@@ -10,6 +10,8 @@ function buildData(installs: PilotInstall[], startDate?: string): DataPoint[] {
   for (const inst of installs) {
     if (!inst.onboarded_at) continue
     const date = inst.onboarded_at.slice(0, 10)
+    // When a startDate is set (campaign charts), drop everything before it
+    if (startDate && date < startDate) continue
     const existing = byDate.get(date) ?? { total: 0, qualified: 0 }
     existing.total++
     if (inst.is_qualified) existing.qualified++
@@ -19,7 +21,7 @@ function buildData(installs: PilotInstall[], startDate?: string): DataPoint[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, counts]) => ({ date, ...counts }))
 
-  // Pin x-axis to startDate — prepend a zero point if data starts later
+  // Pin x-axis to startDate — prepend a zero anchor if data starts later
   if (startDate && (points.length === 0 || points[0].date > startDate)) {
     points = [{ date: startDate, total: 0, qualified: 0 }, ...points]
   }
