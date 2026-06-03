@@ -13,12 +13,10 @@ export default function RunSyncButton({ campaignMode = false }: { campaignMode?:
     try {
       const endpoint = campaignMode ? '/api/admin/trigger-campaign-sync' : '/api/admin/trigger-sync'
       const res = await fetch(endpoint, { method: 'POST' })
-      // 202 = fired (fire-and-forget), sync runs in background up to 300s
-      if (res.status !== 202 && !res.ok) throw new Error(`${res.status}`)
+      if (!res.ok) throw new Error(`${res.status}`)
       setState('done')
-      // Refresh the page after a delay to let sync complete
-      setTimeout(() => router.refresh(), 15000)
-      setTimeout(() => setState('idle'), 5000)
+      router.refresh()
+      setTimeout(() => setState('idle'), 4000)
     } catch {
       setState('error')
       setTimeout(() => setState('idle'), 4000)
@@ -26,9 +24,9 @@ export default function RunSyncButton({ campaignMode = false }: { campaignMode?:
   }
 
   const label =
-    state === 'running' ? 'Starting…'      :
-    state === 'done'    ? 'Sync running ✓' :
-    state === 'error'   ? 'Failed'         :
+    state === 'running' ? 'Syncing…' :
+    state === 'done'    ? 'Done ✓'   :
+    state === 'error'   ? 'Failed'   :
     'Run Sync'
 
   const bg =
