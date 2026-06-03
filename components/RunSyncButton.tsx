@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function RunSyncButton() {
+export default function RunSyncButton({ campaignMode = false }: { campaignMode?: boolean }) {
   const [state, setState] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const router = useRouter()
 
@@ -11,7 +11,8 @@ export default function RunSyncButton() {
     if (state === 'running') return
     setState('running')
     try {
-      const res = await fetch('/api/admin/trigger-sync', { method: 'POST' })
+      const endpoint = campaignMode ? '/api/admin/trigger-campaign-sync' : '/api/admin/trigger-sync'
+      const res = await fetch(endpoint, { method: 'POST' })
       // 202 = fired (fire-and-forget), sync runs in background up to 300s
       if (res.status !== 202 && !res.ok) throw new Error(`${res.status}`)
       setState('done')
