@@ -34,7 +34,10 @@ export default async function DashboardPage({
 
   // ── Campaign mode (admin only) ────────────────────────────────────────────
   if (mode === 'campaign') {
-    const campaignSlugs = Object.keys(CAMPAIGN_META)
+    // Admin sees all campaigns; pilot sees only their own
+    const campaignSlugs = isAdmin
+      ? Object.keys(CAMPAIGN_META)
+      : pilotCampaignSlug ? [pilotCampaignSlug] : []
     const campaignData  = await getLatestCampaignData(campaignSlugs)
 
     const campaigns = campaignSlugs.map((slug, i) => ({
