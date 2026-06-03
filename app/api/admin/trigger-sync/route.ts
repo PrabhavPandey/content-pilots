@@ -16,13 +16,11 @@ export async function POST() {
 
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
 
-  try {
-    const res = await fetch(`${baseUrl}/api/cron/sync?secret=${encodeURIComponent(secret)}`, {
-      cache: 'no-store',
-    })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 })
-  }
+  // Fire-and-forget — don't await the full sync so this endpoint returns immediately.
+  // The cron route runs independently up to its maxDuration (300s).
+  fetch(`${baseUrl}/api/cron/sync?secret=${encodeURIComponent(secret)}`, {
+    cache: 'no-store',
+  }).catch(() => {}) // intentionally not awaited
+
+  return NextResponse.json({ message: 'Sync started' }, { status: 202 })
 }
