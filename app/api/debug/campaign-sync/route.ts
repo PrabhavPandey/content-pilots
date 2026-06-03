@@ -26,22 +26,33 @@ export async function GET(req: NextRequest) {
     },
   }
 
-  // ── 1. Linkrunner ─────────────────────────────────────────────────────────
+  // ── 1. Linkrunner (search per campaign, same as the sync) ──────────────────
+  // Only searches the FIRST campaign with creators to avoid the 65s rate-limit wait
+  // in a debug context. Reports per-creator stats so you can compare against live.
   try {
-    const t0  = Date.now()
-    const map = await getAllCampaignStats()
-    const ms  = Date.now() - t0
+    const t0 = Date.now()
+    const campaignsWithCreators = Object.entries(CAMPAIGN_META).filter(([, m]) => m.creators.length > 0)
+    const map = new Map<string, any>()
+    const searched: string[] = []
+    for (const [slug, meta] of campaignsWithCreators.slice(0, 1)) {
+      const term = meta.searchTerm ?? slug
+      searched.push(term)
+      const result = await getCampaignStatsBySearch(term)
+      for (const [k, v] of result) map.set(k, v)
+    }
+    const ms = Date.now() - t0
     const creatorSlugs = getAllCreatorSlugs()
-    const found = creatorSlugs.filter(s => map.has(s))
+    const found   = creatorSlugs.filter(s => map.has(s))
     const missing = creatorSlugs.filter(s => !map.has(s))
-    const sample = found.slice(0, 5).map(s => ({ slug: s, ...map.get(s) }))
 
     report.linkrunner = {
       ok: true,
-      total_campaigns_returned: map.size,
+      searched_terms: searched,
+      note: 'Only first campaign searched in debug to avoid 65s rate-limit wait',
+      campaigns_returned: map.size,
       creator_slugs_found: found.length,
       creator_slugs_missing: missing,
-      sample_stats: sample,
+      per_creator: found.map(s => ({ slug: s, ...map.get(s) })),
       ms,
     }
   } catch (err: any) {
