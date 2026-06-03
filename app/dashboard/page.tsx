@@ -63,7 +63,7 @@ export default async function DashboardPage({
           <div className="flex items-center gap-3 mt-3 flex-wrap">
             <ModeSwitcher mode="campaign" />
             {latestCampaignSync && <SyncBadge syncedAt={latestCampaignSync} />}
-            <RunSyncButton campaignMode />
+            {isAdmin && <RunSyncButton campaignMode />}
           </div>
         </div>
 
