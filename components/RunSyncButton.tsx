@@ -12,11 +12,12 @@ export default function RunSyncButton() {
     setState('running')
     try {
       const res = await fetch('/api/admin/trigger-sync', { method: 'POST' })
-      if (!res.ok) throw new Error(`${res.status}`)
+      // 202 = fired (fire-and-forget), sync runs in background up to 300s
+      if (res.status !== 202 && !res.ok) throw new Error(`${res.status}`)
       setState('done')
-      // Refresh server data without a full navigation
-      router.refresh()
-      setTimeout(() => setState('idle'), 3000)
+      // Refresh the page after a delay to let sync complete
+      setTimeout(() => router.refresh(), 15000)
+      setTimeout(() => setState('idle'), 5000)
     } catch {
       setState('error')
       setTimeout(() => setState('idle'), 4000)
@@ -24,9 +25,9 @@ export default function RunSyncButton() {
   }
 
   const label =
-    state === 'running' ? 'Syncing…' :
-    state === 'done'    ? 'Done ✓'   :
-    state === 'error'   ? 'Failed'   :
+    state === 'running' ? 'Starting…'      :
+    state === 'done'    ? 'Sync running ✓' :
+    state === 'error'   ? 'Failed'         :
     'Run Sync'
 
   const bg =
