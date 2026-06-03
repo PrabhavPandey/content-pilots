@@ -160,7 +160,7 @@ export default function CampaignCard({ data, meta }: Props) {
 
       {/* Chart */}
       {data.installs.length > 0 && (
-        <InstallsChart installs={chartInstalls} />
+        <InstallsChart installs={chartInstalls} startDate="2026-06-01" />
       )}
 
       {!data.hasData && (
