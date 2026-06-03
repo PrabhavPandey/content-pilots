@@ -99,7 +99,7 @@ function CreatorRow({ creator }: { creator: CampaignData['creators'][number] }) 
 
 // ── Campaign card ─────────────────────────────────────────────────────────────
 
-export default function CampaignCard({ data, meta }: Props) {
+export default function CampaignCard({ data, meta, isAdmin = true }: Props) {
   const [expanded, setExpanded] = useState(false)
   const m    = data.metrics
   const prev = data.prev
