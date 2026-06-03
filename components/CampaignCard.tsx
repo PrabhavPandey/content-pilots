@@ -169,6 +169,12 @@ export default function CampaignCard({ data, meta }: Props) {
         </p>
       )}
 
+      {/* Onboarded users table — same as pilots */}
+      <InstallerTable
+        installs={data.installs as unknown as PilotInstall[]}
+        showPhone
+      />
+
       {/* Creator breakdown toggle */}
       {meta.creators.length > 0 && (
         <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
