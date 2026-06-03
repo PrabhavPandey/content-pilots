@@ -135,6 +135,152 @@ export async function getLatestMetrics(pilotId?: string): Promise<MetricsWithPil
   return results
 }
 
+// ── Campaign mode types ───────────────────────────────────────────────────────
+
+export type CampaignMetrics = {
+  id: string
+  campaign_slug: string
+  fetched_at: string
+  lr_clicks: number
+  lr_installs: number
+  lr_signups: number
+  mp_first_app_opens: number
+  qualified_installs: number
+}
+
+export type CreatorMetrics = {
+  id: string
+  campaign_slug: string
+  creator_slug: string
+  creator_label: string
+  fetched_at: string
+  lr_clicks: number
+  lr_installs: number
+  lr_signups: number
+  mp_first_app_opens: number
+  qualified_installs: number
+}
+
+export type CampaignInstall = {
+  id: string
+  campaign_slug: string
+  creator_slug: string
+  creator_label: string
+  synced_at: string
+  phone: string | null
+  name: string | null
+  company: string | null
+  job_role: string | null
+  city: string | null
+  linkedin: string | null
+  onboarded_at: string | null
+  is_city_qualified: boolean
+  is_company_qualified: boolean
+  is_qualified: boolean
+  gemini_reason: string | null
+}
+
+export type CreatorData = {
+  slug: string
+  label: string
+  metrics: CreatorMetrics | null
+  prev: CreatorMetrics | null
+}
+
+export type CampaignData = {
+  slug: string
+  metrics: CampaignMetrics | null
+  prev: CampaignMetrics | null
+  creators: CreatorData[]
+  installs: CampaignInstall[]
+  hasData: boolean
+}
+
+// Fetch latest campaign + creator metrics for all campaigns in CAMPAIGN_META
+export async function getLatestCampaignData(campaignSlugs: string[]): Promise<CampaignData[]> {
+  const db = getServiceClient()
+  const results: CampaignData[] = []
+
+  for (const slug of campaignSlugs) {
+    // Latest 2 campaign_metrics rows
+    const { data: cmRows } = await db
+      .from('campaign_metrics')
+      .select('*')
+      .eq('campaign_slug', slug)
+      .order('fetched_at', { ascending: false })
+      .limit(2)
+
+    const metrics = cmRows?.[0] ?? null
+    const prev    = cmRows?.[1] ?? null
+
+    // Latest 2 creator_metrics rows per creator slug
+    const { data: allCreatorRows } = await db
+      .from('creator_metrics')
+      .select('*')
+      .eq('campaign_slug', slug)
+      .order('fetched_at', { ascending: false })
+
+    // Group by creator_slug → latest + prev
+    const creatorMap = new Map<string, { curr: CreatorMetrics | null; prev: CreatorMetrics | null }>()
+    for (const row of (allCreatorRows ?? [])) {
+      const entry = creatorMap.get(row.creator_slug)
+      if (!entry) {
+        creatorMap.set(row.creator_slug, { curr: row, prev: null })
+      } else if (!entry.prev) {
+        creatorMap.get(row.creator_slug)!.prev = row
+      }
+    }
+
+    // Installs for chart
+    const installs = await getAllCampaignInstalls(slug)
+
+    // Get unique creator slugs from stored rows
+    const creatorSlugs = [...new Set((allCreatorRows ?? []).map(r => r.creator_slug))]
+    const creators: CreatorData[] = creatorSlugs.map(cs => {
+      const entry = creatorMap.get(cs)
+      const anyRow = (allCreatorRows ?? []).find(r => r.creator_slug === cs)
+      return {
+        slug: cs,
+        label: anyRow?.creator_label ?? cs,
+        metrics: entry?.curr ?? null,
+        prev:    entry?.prev ?? null,
+      }
+    })
+
+    results.push({ slug, metrics, prev, creators, installs, hasData: !!metrics })
+  }
+
+  return results
+}
+
+// Fetch campaign_installs for a campaign (or all) — paginated
+export async function getAllCampaignInstalls(campaignSlug?: string): Promise<CampaignInstall[]> {
+  const db = getServiceClient()
+  const all: CampaignInstall[] = []
+  const PAGE = 1000
+  let from = 0
+
+  while (true) {
+    let q = db
+      .from('campaign_installs')
+      .select('*')
+      .order('onboarded_at', { ascending: true })
+      .range(from, from + PAGE - 1)
+
+    if (campaignSlug) q = q.eq('campaign_slug', campaignSlug)
+
+    const { data, error } = await q
+    if (error || !data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+
+  return all
+}
+
+// ── Pilot installs (existing) ─────────────────────────────────────────────────
+
 // Fetch onboarded installs. Pass pilotId to scope to one pilot (agency view).
 // Returns a map of pilot_id → installs array.
 // Paginates in chunks of 1000 to bypass PostgREST default max_rows=1000.
