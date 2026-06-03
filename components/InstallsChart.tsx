@@ -59,9 +59,9 @@ const SVG_H = 150
 const PLOT_W = SVG_W - PAD.left - PAD.right
 const PLOT_H = SVG_H - PAD.top - PAD.bottom
 
-export default function InstallsChart({ installs }: { installs: PilotInstall[] }) {
+export default function InstallsChart({ installs, startDate }: { installs: PilotInstall[], startDate?: string }) {
   const uid = useId().replace(/:/g, '')
-  const data = buildData(installs)
+  const data = buildData(installs, startDate)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
