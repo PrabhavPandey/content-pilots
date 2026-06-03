@@ -105,7 +105,7 @@ export default async function DashboardPage({
             : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
         </p>
         <div className="flex items-center gap-3 mt-3 flex-wrap">
-          {isAdmin && <ModeSwitcher mode="pilots" />}
+          {canSeeCampaigns && <ModeSwitcher mode="pilots" />}
           {latestSync && <SyncBadge syncedAt={latestSync} />}
           {isAdmin && <RunSyncButton />}
         </div>
