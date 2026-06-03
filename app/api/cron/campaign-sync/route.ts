@@ -115,32 +115,17 @@ export async function GET(req: NextRequest) {
     // Installs to write for this campaign
     const installRows: any[] = []
 
+    // Did the Linkrunner search return data for this campaign's creators?
+    const campaignHasLr = campaignMeta.creators.some(c => lrMap.has(c.slug))
+
     for (const creator of campaignMeta.creators) {
-      const lrStats  = (lrMap as Map<string, any>).get(creator.slug)
+      const lrStats  = lrMap.get(creator.slug)
       const mpBucket = (mpMap as Map<string, any>).get(creator.slug)
 
-      // If LR returned no data for this specific creator (rate-limited page 2 or missing),
-      // carry forward from its last stored creator_metrics row
-      let clicks   = lrStats?.clicks   ?? 0
-      let installs = lrStats?.installs ?? 0
-      let signups  = lrStats?.signups  ?? 0
-
-      if (!lrStats || (!clicks && !installs && !signups)) {
-        const { data: prevCreator } = await db
-          .from('creator_metrics')
-          .select('lr_clicks, lr_installs, lr_signups')
-          .eq('campaign_slug', campaignSlug)
-          .eq('creator_slug', creator.slug)
-          .order('fetched_at', { ascending: false })
-          .limit(1)
-        if (prevCreator?.[0]) {
-          clicks   = prevCreator[0].lr_clicks
-          installs = prevCreator[0].lr_installs
-          signups  = prevCreator[0].lr_signups
-        }
-      }
-
-      const opens = mpBucket?.first_app_opens ?? 0
+      const clicks   = lrStats?.clicks   ?? 0
+      const installs = lrStats?.installs ?? 0
+      const signups  = lrStats?.signups  ?? 0
+      const opens    = mpBucket?.first_app_opens ?? 0
 
       totalClicks   += clicks
       totalInstalls += installs
