@@ -4,6 +4,8 @@ import { useState } from 'react'
 import type { CampaignData, CampaignInstall } from '@/lib/db'
 import type { CampaignMeta } from '@/lib/campaign-config'
 import InstallsChart from './InstallsChart'
+import InstallerTable from './InstallerTable'
+import type { PilotInstall } from '@/lib/db'
 import { formatInr } from '@/lib/pilot-config'
 
 type Props = {
