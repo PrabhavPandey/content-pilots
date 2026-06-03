@@ -201,7 +201,9 @@ export async function GET(req: NextRequest) {
     })
 
     // ── Write creator_metrics ──────────────────────────────────────────────
-    if (creatorRows.length > 0) {
+    // Skip when the LR search failed so the previous (non-zero) creator rows
+    // remain the latest, instead of overwriting the breakdown with zeros.
+    if (creatorRows.length > 0 && campaignHasLr) {
       await db.from('creator_metrics').insert(creatorRows)
     }
 
