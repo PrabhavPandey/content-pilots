@@ -98,18 +98,10 @@ export default async function DashboardPage({
             ? `UGC & Influencer · ${monthYear}`
             : `${metrics[0]?.pilot.type === 'influencer' ? 'Influencer' : 'UGC'} · TAL`}
         </p>
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          {isAdmin && <ModeSwitcher mode="pilots" />}
           {latestSync && <SyncBadge syncedAt={latestSync} />}
           {isAdmin && <RunSyncButton />}
-          {isAdmin && (
-            <a
-              href="/dashboard?mode=campaign"
-              className="text-[11px] font-semibold tracking-[0.08em] uppercase px-3 py-1 rounded-md"
-              style={{ fontFamily: 'var(--font-inconsolata)', background: '#1A1A1A', color: '#fff', textDecoration: 'none' }}
-            >
-              Campaigns →
-            </a>
-          )}
         </div>
       </div>
 
