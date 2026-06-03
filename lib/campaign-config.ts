@@ -22,6 +22,7 @@ export const CAMPAIGN_META: Record<string, CampaignMeta> = {
   'tdf': {
     name: 'Third Draft Films',
     type: 'ugc',
+    searchTerm: 'tdf',
     creators: [
       { slug: 'tdf1',  label: 'tdf-1',  linkrunnerUrl: 'https://link.tal.af/?c=DtyyyJ' },
       { slug: 'tdf2',  label: 'tdf-2',  linkrunnerUrl: 'https://link.tal.af/?c=mSmGzi' },
