@@ -67,11 +67,12 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <CampaignSummary campaigns={campaigns} />
+        {/* Summary only for admin — pilots just see their own card */}
+        {isAdmin && <CampaignSummary campaigns={campaigns} />}
 
         <div className="space-y-8">
           {campaigns.map(({ data, meta }) => (
-            <CampaignCard key={data.slug} data={data} meta={meta} />
+            <CampaignCard key={data.slug} data={data} meta={meta} isAdmin={isAdmin} />
           ))}
         </div>
       </div>
