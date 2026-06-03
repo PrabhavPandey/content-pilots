@@ -2,7 +2,7 @@
 // GET /api/debug/campaign-sync?secret=CRON_SECRET
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllCampaignStats } from '@/lib/linkrunner'
+import { getCampaignStatsBySearch } from '@/lib/linkrunner'
 import { getAllCampaignInstalls } from '@/lib/mixpanel'
 import { CAMPAIGN_META, getAllCreatorSlugs } from '@/lib/campaign-config'
 import { getServiceClient } from '@/lib/db'
