@@ -23,9 +23,9 @@ function LoadingBar({ visible }: { visible: boolean }) {
     }}>
       <div style={{
         height: '100%',
-        background: 'linear-gradient(90deg, #22D3EE, #A78BFA, #4ADE80)',
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.7), #fff)',
         backgroundSize: '200% 100%',
-        animation: visible ? 'progress-slide 1.2s ease-in-out infinite' : 'none',
+        animation: visible ? 'progress-slide 1.4s ease-in-out infinite' : 'none',
         borderRadius: '0 2px 2px 0',
         width: visible ? '85%' : '0%',
         transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
