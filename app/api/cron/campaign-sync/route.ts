@@ -183,10 +183,11 @@ export async function GET(req: NextRequest) {
 
     const campaignQualified = installRows.filter(r => r.is_qualified).length
 
-    // If Linkrunner was rate-limited, carry forward previous LR numbers
-    const finalClicks   = lrHasData ? totalClicks   : (prevLR?.lr_clicks   ?? 0)
-    const finalInstalls = lrHasData ? totalInstalls : (prevLR?.lr_installs ?? 0)
-    const finalSignups  = lrHasData ? totalSignups  : (prevLR?.lr_signups  ?? 0)
+    // If Linkrunner search returned nothing for this campaign (API outage), carry
+    // forward the previous campaign-level LR numbers rather than writing zeros.
+    const finalClicks   = campaignHasLr ? totalClicks   : (prevLR?.lr_clicks   ?? 0)
+    const finalInstalls = campaignHasLr ? totalInstalls : (prevLR?.lr_installs ?? 0)
+    const finalSignups  = campaignHasLr ? totalSignups  : (prevLR?.lr_signups  ?? 0)
 
     // ── Write campaign_metrics ─────────────────────────────────────────────
     await db.from('campaign_metrics').insert({
