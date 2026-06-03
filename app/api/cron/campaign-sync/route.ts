@@ -154,9 +154,9 @@ export async function GET(req: NextRequest) {
         creator_slug:      creator.slug,
         creator_label:     creator.label,
         fetched_at:        now,
-        lr_clicks:         clicks,
-        lr_installs:       installs,
-        lr_signups:        signups,
+        lr_clicks:         lrHasData ? clicks   : (lrStats?.clicks   ?? 0),
+        lr_installs:       lrHasData ? installs : (lrStats?.installs ?? 0),
+        lr_signups:        lrHasData ? signups  : (lrStats?.signups  ?? 0),
         mp_first_app_opens: opens,
         qualified_installs: creatorQualified,
       })
