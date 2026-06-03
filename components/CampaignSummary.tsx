@@ -115,7 +115,7 @@ export default function CampaignSummary({ campaigns }: Props) {
           <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-3" style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}>
             Overall daily growth
           </p>
-          <InstallsChart installs={allInstalls} />
+          <InstallsChart installs={allInstalls} startDate="2026-06-01" />
         </div>
       )}
     </div>
