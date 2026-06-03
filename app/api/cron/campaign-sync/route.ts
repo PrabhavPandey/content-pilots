@@ -164,13 +164,18 @@ export async function GET(req: NextRequest) {
 
     const campaignQualified = installRows.filter(r => r.is_qualified).length
 
+    // If Linkrunner was rate-limited, carry forward previous LR numbers
+    const finalClicks   = lrHasData ? totalClicks   : (prevLR?.lr_clicks   ?? 0)
+    const finalInstalls = lrHasData ? totalInstalls : (prevLR?.lr_installs ?? 0)
+    const finalSignups  = lrHasData ? totalSignups  : (prevLR?.lr_signups  ?? 0)
+
     // ── Write campaign_metrics ─────────────────────────────────────────────
     await db.from('campaign_metrics').insert({
       campaign_slug:     campaignSlug,
       fetched_at:        now,
-      lr_clicks:         totalClicks,
-      lr_installs:       totalInstalls,
-      lr_signups:        totalSignups,
+      lr_clicks:         finalClicks,
+      lr_installs:       finalInstalls,
+      lr_signups:        finalSignups,
       mp_first_app_opens: totalOpens,
       qualified_installs: campaignQualified,
     })
