@@ -153,15 +153,32 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    console.log(`${pilot.name} [${pilotType}]: clicks=${lrStats?.clicks ?? 0} installs=${lrStats?.installs ?? 0} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}`)
+    // If Linkrunner was rate-limited (lrStats is null but map is empty), carry forward prev LR numbers
+    const lrMapHasData = (lrMap as Map<string, any>).size > 0
+    let finalLrClicks = lrStats?.clicks ?? 0
+    let finalLrInstalls = lrStats?.installs ?? 0
+    let finalLrSignups = lrStats?.signups ?? 0
+    if (!lrMapHasData) {
+      const { data: prevMetrics } = await db
+        .from('pilot_metrics')
+        .select('lr_clicks, lr_installs, lr_signups')
+        .eq('pilot_id', pilot.id)
+        .order('fetched_at', { ascending: false })
+        .limit(1)
+      finalLrClicks   = prevMetrics?.[0]?.lr_clicks   ?? 0
+      finalLrInstalls = prevMetrics?.[0]?.lr_installs ?? 0
+      finalLrSignups  = prevMetrics?.[0]?.lr_signups  ?? 0
+    }
+
+    console.log(`${pilot.name} [${pilotType}]: clicks=${finalLrClicks} installs=${finalLrInstalls} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}${!lrMapHasData ? ' (LR rate-limited, carried forward)' : ''}`)
 
     const { error: metricsError } = await db.from('pilot_metrics').insert({
       pilot_id:           pilot.id,
       fetched_at:         syncedAt,
-      lr_clicks:          lrStats?.clicks   ?? 0,
-      lr_installs:        lrStats?.installs  ?? 0,
+      lr_clicks:          finalLrClicks,
+      lr_installs:        finalLrInstalls,
       lr_reinstalls:      0,
-      lr_signups:         lrStats?.signups   ?? 0,
+      lr_signups:         finalLrSignups,
       lr_conversion_rate: 0,
       lr_retention_d1:    0,
       lr_retention_d7:    0,
