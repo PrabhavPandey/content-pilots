@@ -55,23 +55,46 @@ function parseCampaign(c: any): LinkrunnerCampaignStats {
   }
 }
 
-// Fetch the first page of campaigns (limit=100, the API maximum) → lowercase-name → stats map.
-// IMPORTANT: the Reporting API rejects limit>100 (422) and rate-limits to 1 req/min.
-// Pilot campaigns are high-volume so they always appear on page 1 — a single page-1
-// fetch covers all of them in one call without risking rate limits.
-// For campaign-mode creator slugs (which may fall on later pages), use
-// getCampaignStatsBySearch() instead — it filters server-side in one call.
-export async function getAllCampaignStats(): Promise<Map<string, LinkrunnerCampaignStats>> {
+const wait = (s: number) => new Promise(r => setTimeout(r, s * 1000))
+
+// Fetch campaigns → lowercase-name → stats map.
+// IMPORTANT: the Reporting API rejects limit>100 (422), caps page size at 100, and
+// rate-limits to 1 req/min. There are ~158 campaigns across 2 pages.
+//
+// Pass `expectedNames` (the campaign slugs you actually need) so we can short-circuit:
+// page 1 is fetched first, and we only pay the 65s rate-limit wait to fetch page 2 if
+// some expected names weren't on page 1. In the common case (all pilots on page 1) this
+// is a single fast call. For campaign-mode creator slugs use getCampaignStatsBySearch().
+export async function getAllCampaignStats(expectedNames?: string[]): Promise<Map<string, LinkrunnerCampaignStats>> {
   const map = new Map<string, LinkrunnerCampaignStats>()
+  const want = new Set((expectedNames ?? []).map(n => n.toLowerCase().trim()))
   try {
     const res = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: '1' })
     const campaigns: any[] = res?.data?.campaigns ?? []
-    const pag = res?.data?.pagination
-    console.log(`[Linkrunner] page 1: ${campaigns.length} campaigns (total=${pag?.total ?? '?'})`)
+    const totalPages: number = res?.data?.pagination?.pages ?? 1
+    console.log(`[Linkrunner] page 1: ${campaigns.length} campaigns (totalPages=${totalPages})`)
 
     for (const c of campaigns) {
       const name = (c.name ?? '').toLowerCase().trim()
       if (name) map.set(name, parseCampaign(c))
+    }
+
+    // Determine if we still need later pages
+    const stillMissing = () => [...want].filter(n => !map.has(n))
+    const needMore = want.size === 0 ? false : stillMissing().length > 0
+
+    if (needMore) {
+      for (let p = 2; p <= totalPages; p++) {
+        if (stillMissing().length === 0) break
+        console.log(`[Linkrunner] missing ${stillMissing().join(', ')} — waiting 65s for page ${p}/${totalPages}`)
+        await wait(65)
+        const pageRes = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: String(p) })
+        const pageCampaigns: any[] = pageRes?.data?.campaigns ?? []
+        for (const c of pageCampaigns) {
+          const name = (c.name ?? '').toLowerCase().trim()
+          if (name) map.set(name, parseCampaign(c))
+        }
+      }
     }
   } catch (err) {
     console.error('Linkrunner getAllCampaignStats failed:', err)
