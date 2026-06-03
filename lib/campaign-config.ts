@@ -44,6 +44,13 @@ export function getAllCreatorSlugs(): string[] {
   return Object.values(CAMPAIGN_META).flatMap(c => c.creators.map(cr => cr.slug))
 }
 
+// Pilot linkrunner_campaign_name → campaign slug
+// Used to give pilot (agency) accounts access to their campaign in campaign mode
+export const PILOT_TO_CAMPAIGN: Record<string, string> = {
+  'third-draft': 'tdf',
+  'aarchi':      'aarchi',
+}
+
 // Creator slug → campaign slug lookup
 export function slugToCampaign(): Map<string, string> {
   const map = new Map<string, string>()
