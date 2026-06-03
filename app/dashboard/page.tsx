@@ -10,6 +10,7 @@ import DashboardAdminView from '@/components/DashboardAdminView'
 import RunSyncButton from '@/components/RunSyncButton'
 import CampaignCard from '@/components/CampaignCard'
 import CampaignSummary from '@/components/CampaignSummary'
+import ModeSwitcher from '@/components/ModeSwitcher'
 
 export const dynamic = 'force-dynamic'
 
