@@ -173,7 +173,7 @@ export default function CampaignCard({ data, meta, isAdmin = true }: Props) {
       {/* Onboarded users table — same as pilots */}
       <InstallerTable
         installs={data.installs as unknown as PilotInstall[]}
-        showPhone
+        showPhone={isAdmin}
       />
 
       {/* Creator breakdown toggle */}
