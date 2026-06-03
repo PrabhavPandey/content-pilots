@@ -39,6 +39,12 @@ export default async function DashboardPage({
       meta: CAMPAIGN_META[slug],
     }))
 
+    const latestCampaignSync = campaignData
+      .map(d => d.metrics?.fetched_at)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null
+
     return (
       <div className="fade-up">
         <div className="mb-10">
@@ -48,14 +54,9 @@ export default async function DashboardPage({
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             UGC · {monthYear}
           </p>
-          <div className="flex items-center gap-3 mt-2">
-            <a
-              href="/dashboard"
-              className="text-[11px] font-semibold tracking-[0.08em] uppercase px-3 py-1 rounded-md"
-              style={{ fontFamily: 'var(--font-inconsolata)', background: '#F0EDE8', color: 'var(--text-secondary)', textDecoration: 'none' }}
-            >
-              ← Pilots
-            </a>
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <ModeSwitcher mode="campaign" />
+            {latestCampaignSync && <SyncBadge syncedAt={latestCampaignSync} />}
             <RunSyncButton campaignMode />
           </div>
         </div>
