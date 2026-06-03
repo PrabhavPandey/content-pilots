@@ -61,20 +61,22 @@ function parseCampaign(c: any): LinkrunnerCampaignStats {
 export async function getAllCampaignStats(): Promise<Map<string, LinkrunnerCampaignStats>> {
   const map = new Map<string, LinkrunnerCampaignStats>()
   try {
-    const first = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100' })
+    // Use limit=500 to fetch all campaigns in a single call — avoids hitting the
+    // 1 req/min rate limit that triggers when paginating across multiple requests.
+    const first = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '500' })
     const page1: any[] = first?.data?.campaigns ?? []
     const totalPages: number = first?.data?.pagination?.pages ?? 1
 
-    console.log(`[Linkrunner] reporting page 1/${totalPages}, ${page1.length} campaigns`)
+    console.log(`[Linkrunner] reporting page 1/${totalPages}, ${page1.length} campaigns (limit=500)`)
 
     for (const c of page1) {
       const name = (c.name ?? '').toLowerCase().trim()
       if (name) map.set(name, parseCampaign(c))
     }
 
-    // Fetch remaining pages sequentially (rate limit: 1 req/min)
+    // Only paginate if there are somehow more than 500 campaigns
     for (let p = 2; p <= totalPages; p++) {
-      const page = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: String(p) })
+      const page = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '500', page: String(p) })
       const campaigns: any[] = page?.data?.campaigns ?? []
       for (const c of campaigns) {
         const name = (c.name ?? '').toLowerCase().trim()
