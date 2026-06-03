@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { waitUntil } from '@vercel/functions'
+
+export const maxDuration = 300
 
 export async function POST() {
   const session = await auth()
@@ -13,13 +14,11 @@ export async function POST() {
 
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
 
-  // waitUntil keeps the function alive until the fetch completes,
-  // while still returning the 202 response immediately to the client.
-  waitUntil(
-    fetch(`${baseUrl}/api/cron/sync?secret=${encodeURIComponent(secret)}`, {
-      cache: 'no-store',
-    }).catch(() => {})
-  )
-
-  return NextResponse.json({ message: 'Sync started' }, { status: 202 })
+  try {
+    const res  = await fetch(`${baseUrl}/api/cron/sync?secret=${encodeURIComponent(secret)}`, { cache: 'no-store' })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 })
+  }
 }
