@@ -11,6 +11,7 @@ import { formatInr } from '@/lib/pilot-config'
 type Props = {
   data: CampaignData
   meta: CampaignMeta
+  isAdmin?: boolean
 }
 
 function delta(curr: number, prev: number | undefined) {
