@@ -11,6 +11,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/db'
+
+export const maxDuration = 300
 import { getAllCampaignStats } from '@/lib/linkrunner'
 import { getAllCampaignInstalls } from '@/lib/mixpanel'
 import { getOnboardedUsers } from '@/lib/metabase'
