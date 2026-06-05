@@ -157,12 +157,15 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // If Linkrunner was rate-limited (lrStats is null but map is empty), carry forward prev LR numbers
-    const lrMapHasData = (lrMap as Map<string, any>).size > 0
-    let finalLrClicks = lrStats?.clicks ?? 0
+    // If this specific pilot's LR data is missing (page 2 not fetched, or API outage),
+    // carry forward its previous LR numbers rather than writing zeros.
+    // NOTE: check per-pilot (lrStats null), NOT the global map — the map can be
+    // populated from page 1 while this specific pilot lives on page 2.
+    let finalLrClicks   = lrStats?.clicks   ?? 0
     let finalLrInstalls = lrStats?.installs ?? 0
-    let finalLrSignups = lrStats?.signups ?? 0
-    if (!lrMapHasData) {
+    let finalLrSignups  = lrStats?.signups  ?? 0
+    const lrMissing = !lrStats
+    if (lrMissing) {
       const { data: prevMetrics } = await db
         .from('pilot_metrics')
         .select('lr_clicks, lr_installs, lr_signups')
@@ -174,7 +177,7 @@ export async function GET(req: NextRequest) {
       finalLrSignups  = prevMetrics?.[0]?.lr_signups  ?? 0
     }
 
-    console.log(`${pilot.name} [${pilotType}]: clicks=${finalLrClicks} installs=${finalLrInstalls} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}${!lrMapHasData ? ' (LR rate-limited, carried forward)' : ''}`)
+    console.log(`${pilot.name} [${pilotType}]: clicks=${finalLrClicks} installs=${finalLrInstalls} onboarded=${onboardedUsers.length} qualified=${qualifiedInstalls}${lrMissing ? ' (LR missing, carried forward)' : ''}`)
 
     const { error: metricsError } = await db.from('pilot_metrics').insert({
       pilot_id:           pilot.id,
