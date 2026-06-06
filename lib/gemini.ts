@@ -41,8 +41,6 @@ NOT_QUALIFIED if:
 - Company field is blank, "NA", "unknown", "student", "freelancer", "personal projects", or clearly not a real company
 - Company is clearly non-tech: hotels, restaurants, retail, manufacturing, construction, or real estate
 
-When the company sounds like a small Indian IT services or outsourcing firm, default to NOT_QUALIFIED.
-
 Company: {company}
 Job role: {job_role}
 
