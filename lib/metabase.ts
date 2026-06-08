@@ -83,22 +83,29 @@ async function fetchBatch(phones: string[]): Promise<MetabaseUser[]> {
 
 // Look up TAL user profiles for a specific set of phones (10-digit normalized).
 // Batches in chunks of PHONE_BATCH_SIZE to stay under Metabase's 2000-row API cap.
+// Runs up to BATCH_CONCURRENCY batches in parallel to keep total time under 30s.
+const BATCH_CONCURRENCY = 5
+
 export async function getOnboardedUsers(normalizedPhones: string[]): Promise<MetabaseUser[]> {
   if (normalizedPhones.length === 0) return []
 
   const phones = [...new Set(normalizedPhones)]
+  const batches: string[][] = []
+  for (let i = 0; i < phones.length; i += PHONE_BATCH_SIZE) {
+    batches.push(phones.slice(i, i + PHONE_BATCH_SIZE))
+  }
+
   const results: MetabaseUser[] = []
 
-  for (let i = 0; i < phones.length; i += PHONE_BATCH_SIZE) {
-    const batch = phones.slice(i, i + PHONE_BATCH_SIZE)
-    try {
-      const batchResult = await fetchBatch(batch)
-      results.push(...batchResult)
-    } catch (err) {
-      console.error(`Metabase batch ${i}–${i + PHONE_BATCH_SIZE} failed:`, err)
+  for (let i = 0; i < batches.length; i += BATCH_CONCURRENCY) {
+    const chunk = batches.slice(i, i + BATCH_CONCURRENCY)
+    const settled = await Promise.allSettled(chunk.map(b => fetchBatch(b)))
+    for (const r of settled) {
+      if (r.status === 'fulfilled') results.push(...r.value)
+      else console.error('Metabase batch failed:', r.reason)
     }
   }
 
-  console.log(`Metabase: ${results.length} users from ${phones.length} phones (${Math.ceil(phones.length / PHONE_BATCH_SIZE)} batches)`)
+  console.log(`Metabase: ${results.length} users from ${phones.length} phones (${batches.length} batches, concurrency ${BATCH_CONCURRENCY})`)
   return results
 }
