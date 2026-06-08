@@ -194,12 +194,15 @@ export async function GET(req: NextRequest) {
     })
     if (metricsError) throw metricsError
 
-    // Refresh installs: delete + insert in parallel
+    // Refresh installs: delete, then insert in 500-row batches in parallel
     await db.from('pilot_installs').delete().eq('pilot_id', pilot.id)
     if (onboardedUsers.length > 0) {
-      await db.from('pilot_installs').insert(
-        onboardedUsers.map(u => ({ ...u, pilot_id: pilot.id, synced_at: syncedAt }))
-      )
+      const rows = onboardedUsers.map(u => ({ ...u, pilot_id: pilot.id, synced_at: syncedAt }))
+      const batches: any[][] = []
+      for (let i = 0; i < rows.length; i += 500) {
+        batches.push(rows.slice(i, i + 500))
+      }
+      await Promise.all(batches.map(b => db.from('pilot_installs').insert(b)))
     }
 
     return { pilot: pilot.name, status: 'ok', qualifiedInstalls, onboarded: onboardedUsers.length }
