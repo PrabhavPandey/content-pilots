@@ -12,6 +12,9 @@
     },
     "app/api/cron/campaign-sync/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/admin/trigger-campaign-sync/route.ts": {
+      "maxDuration": 300
     }
   }
 }
