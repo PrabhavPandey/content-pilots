@@ -91,10 +91,10 @@ export async function GET(req: NextRequest) {
 
   console.log(`[CampaignSync] Linkrunner returned ${lrMap.size} creator stats`)
 
-  // ── 5. Per-campaign processing ────────────────────────────────────────────
+  // ── 5. Per-campaign processing (parallel across campaigns) ────────────────
   const summary: Record<string, any> = {}
 
-  for (const [campaignSlug, campaignMeta] of Object.entries(CAMPAIGN_META)) {
+  await Promise.all(Object.entries(CAMPAIGN_META).map(async ([campaignSlug, campaignMeta]) => {
     const pilotType = campaignMeta.type
     const creatorRows: any[] = []
     let totalClicks = 0, totalInstalls = 0, totalSignups = 0, totalOpens = 0
