@@ -147,15 +147,28 @@ export async function batchClassifyUsers(
       .map(u => buildCacheKey(u.company, u.jobRole, pilotType))
   )]
 
-  // Bulk Supabase lookup
-  const { data: cached } = await db
-    .from('company_classifications')
-    .select('company_name, is_startup, reason')
-    .in('company_name', unique)
+  // Bulk Supabase lookup, batched.
+  // PostgREST silently caps .select() at 1000 rows even with .limit(), AND .in()
+  // with thousands of values can blow URL length limits. Chunk into 200-key blocks
+  // and run them in parallel — cuts time and guarantees we get every cached row.
+  const CACHE_CHUNK = 200
+  const cacheChunks: string[][] = []
+  for (let i = 0; i < unique.length; i += CACHE_CHUNK) {
+    cacheChunks.push(unique.slice(i, i + CACHE_CHUNK))
+  }
 
-  const cachedMap = new Map(
-    (cached ?? []).map(r => [r.company_name, { qualified: r.is_startup as boolean, reason: r.reason as string | null }])
-  )
+  const cachedMap = new Map<string, CacheEntry>()
+  const chunkResults = await Promise.all(cacheChunks.map(chunk =>
+    db.from('company_classifications')
+      .select('company_name, is_startup, reason')
+      .in('company_name', chunk)
+      .then(r => r.data ?? [])
+  ))
+  for (const rows of chunkResults) {
+    for (const r of rows) {
+      cachedMap.set(r.company_name, { qualified: r.is_startup as boolean, reason: r.reason as string | null })
+    }
+  }
 
   const uncached = unique.filter(k => !cachedMap.has(k) && !sessionCache.has(k))
 
