@@ -206,10 +206,12 @@ export async function GET(req: NextRequest) {
     // ── Refresh campaign_installs (delete + reinsert) ──────────────────────
     await db.from('campaign_installs').delete().eq('campaign_slug', campaignSlug)
     if (installRows.length > 0) {
-      // Insert in batches of 500
+      // Insert in 500-row batches, run all batches in parallel
+      const batches: any[][] = []
       for (let i = 0; i < installRows.length; i += 500) {
-        await db.from('campaign_installs').insert(installRows.slice(i, i + 500))
+        batches.push(installRows.slice(i, i + 500))
       }
+      await Promise.all(batches.map(b => db.from('campaign_installs').insert(b)))
     }
 
     summary[campaignSlug] = {
@@ -221,7 +223,7 @@ export async function GET(req: NextRequest) {
     }
 
     console.log(`[CampaignSync] ${campaignSlug}: ${totalInstalls} installs, ${campaignQualified} qualified`)
-  }
+  }))
 
   return NextResponse.json({ ok: true, synced_at: now, summary })
 }
