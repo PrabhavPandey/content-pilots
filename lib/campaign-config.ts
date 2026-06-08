@@ -39,7 +39,24 @@ export const CAMPAIGN_META: Record<string, CampaignMeta> = {
   'aarchi': {
     name: 'Aarchi',
     type: 'ugc',
-    creators: [], // creator links TBD — add when available
+    searchTerm: 'aarchi',
+    creators: [
+      { slug: 'aarchi1',  label: 'aarchi-1',  linkrunnerUrl: 'https://link.tal.af/?c=Zrjajk' },
+      { slug: 'aarchi2',  label: 'aarchi-2',  linkrunnerUrl: 'https://link.tal.af/?c=ObraPP' },
+      { slug: 'aarchi3',  label: 'aarchi-3',  linkrunnerUrl: 'https://link.tal.af/?c=qiMmkt' },
+      { slug: 'aarchi4',  label: 'aarchi-4',  linkrunnerUrl: 'https://link.tal.af/?c=DoILFD' },
+      { slug: 'aarchi5',  label: 'aarchi-5',  linkrunnerUrl: 'https://link.tal.af/?c=YKCbwI' },
+      { slug: 'aarchi6',  label: 'aarchi-6',  linkrunnerUrl: 'https://link.tal.af/?c=HbjFTU' },
+      { slug: 'aarchi7',  label: 'aarchi-7',  linkrunnerUrl: 'https://link.tal.af/?c=SsyOaK' },
+      { slug: 'aarchi8',  label: 'aarchi-8',  linkrunnerUrl: 'https://link.tal.af/?c=lVEgKJ' },
+      { slug: 'aarchi9',  label: 'aarchi-9',  linkrunnerUrl: 'https://link.tal.af/?c=bxJTwB' },
+      { slug: 'aarchi10', label: 'aarchi-10', linkrunnerUrl: 'https://link.tal.af/?c=mUMOki' },
+      { slug: 'aarchi11', label: 'aarchi-11', linkrunnerUrl: 'https://link.tal.af/?c=QMEJyt' },
+      { slug: 'aarchi12', label: 'aarchi-12', linkrunnerUrl: 'https://link.tal.af/?c=rjgGWv' },
+      { slug: 'aarchi13', label: 'aarchi-13', linkrunnerUrl: 'https://link.tal.af/?c=wjdoYo' },
+      { slug: 'aarchi14', label: 'aarchi-14', linkrunnerUrl: 'https://link.tal.af/?c=xJHtYA' },
+      { slug: 'aarchi15', label: 'aarchi-15', linkrunnerUrl: 'https://link.tal.af/?c=bkdLGj' },
+    ],
   },
 }
 
