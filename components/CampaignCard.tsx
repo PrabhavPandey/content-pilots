@@ -43,24 +43,45 @@ function MetricCol({ value, label, delta: d }: { value: string; label: string; d
 
 // ── Creator row (no chart) ─────────────────────────────────────────────────────
 
-function CreatorRow({ creator }: { creator: CampaignData['creators'][number] }) {
+type CreatorRowProps = {
+  creator: CampaignData['creators'][number]
+  name?: string
+  instagramUrl?: string
+}
+
+function CreatorRow({ creator, name, instagramUrl }: CreatorRowProps) {
   const m    = creator.metrics
   const prev = creator.prev
+  const displayName = name ?? creator.label
 
   return (
     <div
       className="grid gap-4 px-4 py-3 rounded-xl"
       style={{
-        gridTemplateColumns: '120px repeat(4, 1fr)',
+        gridTemplateColumns: '130px repeat(3, 1fr)',
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
       }}
     >
-      {/* Label */}
+      {/* Name (clickable if Instagram URL available) */}
       <div className="flex items-center">
-        <span className="text-[11px] font-semibold tracking-[0.12em]" style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-secondary)' }}>
-          {creator.label}
-        </span>
+        {instagramUrl ? (
+          <a
+            href={instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[12px] font-semibold hover:underline"
+            style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+            onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+          >
+            {displayName}
+          </a>
+        ) : (
+          <span className="text-[12px] font-semibold" style={{ fontFamily: 'var(--font-poppins)', color: 'var(--text-primary)' }}>
+            {displayName}
+          </span>
+        )}
       </div>
 
       <div>
@@ -78,13 +99,6 @@ function CreatorRow({ creator }: { creator: CampaignData['creators'][number] }) 
           {m && prev && (() => { const d = delta(m.lr_installs, prev.lr_installs); return d ? <span className={`text-[10px] font-semibold ${d.up ? 'text-emerald-500' : 'text-red-400'}`}>{d.text}</span> : null })()}
         </div>
         <div className="text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}>Installs</div>
-      </div>
-
-      <div>
-        <div className="text-sm font-semibold tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-poppins)' }}>
-          {m ? m.lr_signups.toLocaleString() : '—'}
-        </div>
-        <div className="text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}>Sign-ups</div>
       </div>
 
       <div>
