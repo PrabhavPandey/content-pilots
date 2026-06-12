@@ -211,24 +211,26 @@ export default function CampaignCard({ data, meta, isAdmin = true }: Props) {
               {/* Header row */}
               <div
                 className="grid gap-4 px-4 py-1"
-                style={{ gridTemplateColumns: '120px repeat(4, 1fr)' }}
+                style={{ gridTemplateColumns: '130px repeat(3, 1fr)' }}
               >
-                {['Creator', 'Clicks', 'Installs', 'Sign-ups', 'Qualified'].map(h => (
+                {['Creator', 'Clicks', 'Installs', 'Qualified'].map(h => (
                   <div key={h} className="text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ fontFamily: 'var(--font-inconsolata)', color: 'var(--text-muted)' }}>
                     {h}
                   </div>
                 ))}
               </div>
 
-              {/* Creator rows */}
-              {data.creators.length > 0
-                ? data.creators
-                    .sort((a, b) => (b.metrics?.lr_installs ?? 0) - (a.metrics?.lr_installs ?? 0))
-                    .map(creator => <CreatorRow key={creator.slug} creator={creator} />)
-                : meta.creators.map(cr => (
-                    <CreatorRow key={cr.slug} creator={{ slug: cr.slug, label: cr.label, metrics: null, prev: null }} />
-                  ))
-              }
+              {/* Creator rows — look up name + instagramUrl from meta by slug */}
+              {(() => {
+                const metaBySlug = new Map(meta.creators.map(cr => [cr.slug, cr]))
+                const rows = data.creators.length > 0
+                  ? [...data.creators].sort((a, b) => (b.metrics?.lr_installs ?? 0) - (a.metrics?.lr_installs ?? 0))
+                  : meta.creators.map(cr => ({ slug: cr.slug, label: cr.label, metrics: null, prev: null }))
+                return rows.map(creator => {
+                  const m = metaBySlug.get(creator.slug)
+                  return <CreatorRow key={creator.slug} creator={creator} name={m?.name} instagramUrl={m?.instagramUrl} />
+                })
+              })()}
             </div>
           )}
         </div>
