@@ -6,6 +6,8 @@ export type CreatorMeta = {
   slug: string         // linkrunner campaign name e.g. 'tdf10'
   label: string        // display label e.g. 'tdf-10'
   linkrunnerUrl: string
+  name?: string        // creator first name (Title Case) e.g. 'Priyanshi'
+  instagramUrl?: string
 }
 
 export type CampaignMeta = {
