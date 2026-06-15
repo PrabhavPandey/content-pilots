@@ -44,7 +44,7 @@ export const CAMPAIGN_META: Record<string, CampaignMeta> = {
     searchTerm: 'aarchi',
     creators: [
       { slug: 'aarchi1',  label: 'aarchi-1',  name: 'Samridhi',  instagramUrl: 'https://www.instagram.com/samridhi.worktales/',    linkrunnerUrl: 'https://link.tal.af/?c=Zrjajk' },
-      { slug: 'aarchi2',  label: 'aarchi-2',  name: 'Prachi',    instagramUrl: 'https://www.instagram.com/prachi.in.bangalore/',   linkrunnerUrl: 'https://link.tal.af/?c=ObraPP' },
+      { slug: 'aarchi 2', label: 'aarchi-2',  name: 'Prachi',    instagramUrl: 'https://www.instagram.com/prachi.in.bangalore/',   linkrunnerUrl: 'https://link.tal.af/?c=ObraPP' },
       { slug: 'aarchi3',  label: 'aarchi-3',  name: 'Aman',      instagramUrl: 'https://www.instagram.com/career.aman/',           linkrunnerUrl: 'https://link.tal.af/?c=qiMmkt' },
       { slug: 'aarchi4',  label: 'aarchi-4',  name: 'Priya U',   instagramUrl: 'https://www.instagram.com/priya.officefiles/',     linkrunnerUrl: 'https://link.tal.af/?c=DoILFD' },
       { slug: 'aarchi5',  label: 'aarchi-5',  name: 'Alisha',    instagramUrl: 'https://www.instagram.com/alishacareerdiaries/',   linkrunnerUrl: 'https://link.tal.af/?c=YKCbwI' },
