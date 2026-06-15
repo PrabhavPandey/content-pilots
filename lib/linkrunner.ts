@@ -69,7 +69,7 @@ export async function getAllCampaignStats(expectedNames?: string[]): Promise<Map
   const map = new Map<string, LinkrunnerCampaignStats>()
   const want = new Set((expectedNames ?? []).map(n => n.toLowerCase().trim()))
   try {
-    const res = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: '1' })
+    const res = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: '1', start_date: LR_START_DATE, end_date: todayISO() })
     const campaigns: any[] = res?.data?.campaigns ?? []
     const totalPages: number = res?.data?.pagination?.pages ?? 1
     console.log(`[Linkrunner] page 1: ${campaigns.length} campaigns (totalPages=${totalPages})`)
