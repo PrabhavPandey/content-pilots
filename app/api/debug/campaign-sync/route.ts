@@ -26,15 +26,22 @@ export async function GET(req: NextRequest) {
     },
   }
 
-  // ── 1. Linkrunner (search per campaign, same as the sync) ──────────────────
-  // Only searches the FIRST campaign with creators to avoid the 65s rate-limit wait
-  // in a debug context. Reports per-creator stats so you can compare against live.
+  // ── 1. Linkrunner — search each campaign, dump raw names returned ──────────
+  // Searches all campaigns (65s wait between each to respect rate limit).
+  // raw_names_returned shows the EXACT campaign names Linkrunner uses — compare
+  // these against our configured slugs to catch any naming mismatches.
   try {
     const t0 = Date.now()
     const campaignsWithCreators = Object.entries(CAMPAIGN_META).filter(([, m]) => m.creators.length > 0)
     const map = new Map<string, any>()
     const searched: string[] = []
-    for (const [slug, meta] of campaignsWithCreators.slice(0, 1)) {
+    let first = true
+    for (const [slug, meta] of campaignsWithCreators) {
+      if (!first) {
+        console.log('[Debug] waiting 65s before next Linkrunner search (rate limit)')
+        await new Promise(r => setTimeout(r, 65_000))
+      }
+      first = false
       const term = meta.searchTerm ?? slug
       searched.push(term)
       const result = await getCampaignStatsBySearch(term)
@@ -48,9 +55,8 @@ export async function GET(req: NextRequest) {
     report.linkrunner = {
       ok: true,
       searched_terms: searched,
-      note: 'Only first campaign searched in debug to avoid 65s rate-limit wait',
-      campaigns_returned: map.size,
-      creator_slugs_found: found.length,
+      raw_names_returned: [...map.keys()],   // exact names from LR — check for mismatches
+      creator_slugs_found: found,
       creator_slugs_missing: missing,
       per_creator: found.map(s => ({ slug: s, ...map.get(s) })),
       ms,
