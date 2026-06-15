@@ -7,7 +7,7 @@ import { getAllCampaignInstalls } from '@/lib/mixpanel'
 import { CAMPAIGN_META, getAllCreatorSlugs } from '@/lib/campaign-config'
 import { getServiceClient } from '@/lib/db'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('secret')
