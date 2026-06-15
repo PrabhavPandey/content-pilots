@@ -102,13 +102,28 @@ export async function getAllCampaignStats(expectedNames?: string[]): Promise<Map
   return map
 }
 
+// Earliest possible date for any campaign data — used as start_date in all API calls
+// so Linkrunner returns cumulative stats, not just "today".
+const LR_START_DATE = '2026-01-01'
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 // Fetch campaigns matching a server-side search term in a single call.
 // The Reporting API supports `search` which filters by campaign name (prefix/substring).
 // e.g. getCampaignStatsBySearch('tdf') returns all tdf1…tdf10 creators in one request.
+// Always passes start_date + end_date — without them LR defaults to today-only, which
+// makes low-traffic campaigns appear to have 0 clicks/installs.
 export async function getCampaignStatsBySearch(search: string): Promise<Map<string, LinkrunnerCampaignStats>> {
   const map = new Map<string, LinkrunnerCampaignStats>()
   try {
-    const res = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', search })
+    const res = await linkrunnerFetch('/v1/reporting/campaigns', {
+      limit: '100',
+      search,
+      start_date: LR_START_DATE,
+      end_date:   todayISO(),
+    })
     const campaigns: any[] = res?.data?.campaigns ?? []
     console.log(`[Linkrunner] search "${search}": ${campaigns.length} campaigns`)
 
