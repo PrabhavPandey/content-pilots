@@ -88,7 +88,7 @@ export async function getAllCampaignStats(expectedNames?: string[]): Promise<Map
         if (stillMissing().length === 0) break
         console.log(`[Linkrunner] missing ${stillMissing().join(', ')} — waiting 65s for page ${p}/${totalPages}`)
         await wait(65)
-        const pageRes = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: String(p) })
+        const pageRes = await linkrunnerFetch('/v1/reporting/campaigns', { limit: '100', page: String(p), start_date: LR_START_DATE, end_date: todayISO() })
         const pageCampaigns: any[] = pageRes?.data?.campaigns ?? []
         for (const c of pageCampaigns) {
           const name = (c.name ?? '').toLowerCase().trim()
