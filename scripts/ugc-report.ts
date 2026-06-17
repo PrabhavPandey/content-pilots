@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
-import * as dotenv from 'dotenv'
-import * as path from 'path'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
-dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
+// Load .env.local without dotenv dependency
+const envPath = join(import.meta.dirname ?? __dirname, '..', '.env.local')
+for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
+  const m = line.match(/^([A-Z_]+)=(.*)$/)
+  if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+}
 
 const db = createClient(
   process.env.SUPABASE_URL!,
